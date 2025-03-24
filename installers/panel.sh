@@ -110,13 +110,14 @@ ptdl_dl() {
   mkdir -p /var/www/pterodactyl
   cd /var/www/pterodactyl || exit
 
+  # Download panel
   output "Downloading panel from: $PANEL_DL_URL"
   curl -Lo panel.tar.gz "$PANEL_DL_URL" || {
     error "Failed to download panel files"
     exit 1
   }
 
-  # Extract the panel files
+  # Extract files
   tar -xzvf panel.tar.gz
   rm -f panel.tar.gz
 
@@ -140,31 +141,46 @@ ptdl_dl() {
   chmod -R 755 storage bootstrap/cache
   success "Panel files downloaded successfully!"
 
-  # Install Node.js 20.x (current LTS)
-  output "Installing Node.js 20.x..."
+  # Force Node.js 20.x installation
+  output "Forcing Node.js 20.x installation..."
+  sudo apt remove --purge nodejs npm -y 2>/dev/null
+  sudo rm -rf /usr/local/bin/npm /usr/local/bin/node
+  sudo rm -rf /usr/lib/node_modules
   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
   sudo apt-get install -y nodejs
+  sudo npm install -g npm@latest
+
+  # Verify Node.js version
+  NODE_VERSION=$(node -v)
+  if [[ ! "$NODE_VERSION" =~ ^v20 ]]; then
+    error "Failed to install Node.js 20.x. Current version: $NODE_VERSION"
+    exit 1
+  fi
+  success "Node.js $NODE_VERSION installed successfully"
 
   # Install Yarn and required global packages
   output "Installing Yarn and build tools..."
-  npm install -g yarn cross-env
+  sudo npm install -g yarn cross-env --force
 
   # Install panel dependencies
   output "Installing panel dependencies..."
-  yarn install --production --ignore-engines
+  yarn install --production --ignore-engines --network-timeout 1000000
 
-  # Fix missing peer dependencies
+  # Fix common peer dependencies
   output "Fixing peer dependencies..."
-  yarn add react-is@^16.8.0 styled-components@^5.2.1 --dev
+  yarn add react-is@^16.8.0 styled-components@^5.2.1 xterm-addon-search@^0.5.0 --dev
 
-  # Build assets
+  # Build assets with legacy OpenSSL provider if needed
   output "Building panel assets..."
+  export NODE_OPTIONS=--openssl-legacy-provider
   yarn add cross-env --dev
   yarn run build:production
   
+  # Set up environment
   cp .env.example .env
+  chown -R www-data:www-data .
 
-  success "Panel installation completed successfully!"
+  success "Pterodactyl Panel installed successfully with Node.js $NODE_VERSION"
 }
 
 install_composer_deps() {
