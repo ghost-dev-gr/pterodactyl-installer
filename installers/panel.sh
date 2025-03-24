@@ -106,9 +106,9 @@ install_composer() {
 ptdl_dl() {
   output "Downloading pterodactyl panel files..."
   
-  # Create temporary working directory
-  TEMP_PANELDIR="$(mktemp -d)"
-  cd "$TEMP_PANELDIR" || exit
+  # Create target directory
+  mkdir -p /var/www/pterodactyl
+  cd /var/www/pterodactyl || exit
 
   output "Downloading panel from: $PANEL_DL_URL"
   curl -Lo panel.tar.gz "$PANEL_DL_URL" || {
@@ -116,7 +116,7 @@ ptdl_dl() {
     exit 1
   }
 
-  # Extract the panel files
+  # Extract the panel files directly into the target directory
   tar -xzvf panel.tar.gz
   rm -f panel.tar.gz
 
@@ -129,24 +129,19 @@ ptdl_dl() {
     exit 1
   fi
 
-  # Create target directory in /srv/pterodactyl
-  mkdir -p /srv/pterodactyl
-
-  # If the directory is named with version (panel-1.11.10), move its contents one level back
+  # If the directory is named with version (panel-1.11.10), move its contents up
   if [[ "$panel_dir" != "./panel" ]]; then
-    output "Moving contents from $panel_dir to /srv/pterodactyl"
-    mv "$panel_dir"/* /srv/pterodactyl/
-    rm -rf "$panel_dir"  # Remove the now-empty folder
-  else
-    # If it's already named panel, just move the whole directory
-    mv panel /srv/pterodactyl
+    output "Moving contents from $panel_dir to /var/www/pterodactyl"
+    mv "$panel_dir"/* .
+    rmdir "$panel_dir"
   fi
 
-  # Clean up temp directory
-  cd /tmp && rm -rf "$TEMP_PANELDIR"
+  # Create required directories if they don't exist
+  mkdir -p storage bootstrap/cache
 
   # Set proper permissions
-  chmod -R 755 /srv/pterodactyl/storage/* /srv/pterodactyl/bootstrap/cache/
+  chmod -R 755 storage bootstrap/cache
+  success "Custom panel repository downloaded successfully!"
 
   output "Installing Node.js and Yarn..."
   curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash -
@@ -154,7 +149,6 @@ ptdl_dl() {
   npm install -g yarn
 
   output "Installing panel dependencies with Yarn..."
-  cd /srv/pterodactyl
   yarn install --production
 
   output "Building panel assets..."
