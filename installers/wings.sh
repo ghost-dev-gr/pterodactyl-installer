@@ -121,55 +121,49 @@ dep_install() {
 
   success "Dependencies installed!"
 }
-
 ptdl_dl() {
   output "Downloading custom wings files..."
+  
   # Create wings directory
-  WINGSDIR="/srv/wings"
+  WINGSDIR="/usr/local/bin/wings"
   mkdir -p "$WINGSDIR"
   cd "$WINGSDIR" || exit
 
-  rm -rf wings wings-* wings.zip 2>/dev/null
+  rm -rf wings wings-* wings.zip wings.tar.gz 2>/dev/null
 
-  # Define URLs with correct version and spelling
-
+  # Define URLs
   ZIP_URL="https://github.com/ghost-dev-gr/wings/releases/latest/download/wings.zip"
   TAR_URL="https://github.com/ghost-dev-gr/wings/releases/latest/download/wings.tar.gz"
   GIT_URL="https://github.com/ghost-dev-gr/wings.git"
 
-# Function to validate downloaded file
+  # Function to validate downloaded file
   validate_file() {
     local file=$1
     echo "Validating $file..."
     
-    # Check file exists and has size
     if [ ! -s "$file" ]; then
       echo "Error: File is empty or doesn't exist"
       return 1
     fi
-    
-    # Check file type
+
     file_type=$(file -b "$file")
     echo "File type: $file_type"
-    
-    # Check for common archive types
+
     if [[ "$file_type" == *"Zip archive"* ]] || 
        [[ "$file_type" == *"gzip compressed"* ]] || 
        [[ "$file_type" == *"tar archive"* ]]; then
       return 0
     fi
-    
-    # Check if it might be an error page
+
     if head -1 "$file" | grep -qi "html\|404\|not found\|error"; then
       echo "Error: Downloaded file appears to be an error page"
-      head -n 5 "$file"
       return 1
     fi
-    
+
     return 0
   }
 
-  # Attempt download methods in order
+  # Attempt download methods
   download_attempt() {
     echo "Attempting download method: $1"
     
@@ -177,22 +171,22 @@ ptdl_dl() {
       curl_zip)
         curl -L -o wings.zip "$ZIP_URL" || return 1
         validate_file "wings.zip" || return 1
-        unzip -o wings.zip && rm -f wings.zip
+        unzip -o wings.zip -d "$WINGSDIR" && rm -f wings.zip
         ;;
       wget_zip)
         wget -O wings.zip "$ZIP_URL" || return 1
         validate_file "wings.zip" || return 1
-        unzip -o wings.zip && rm -f wings.zip
+        unzip -o wings.zip -d "$WINGSDIR" && rm -f wings.zip
         ;;
       curl_tar)
         curl -L -o wings.tar.gz "$TAR_URL" || return 1
         validate_file "wings.tar.gz" || return 1
-        tar -xzf wings.tar.gz && rm -f wings.tar.gz
+        tar -xzf wings.tar.gz -C "$WINGSDIR" && rm -f wings.tar.gz
         ;;
       wget_tar)
         wget -O wings.tar.gz "$TAR_URL" || return 1
         validate_file "wings.tar.gz" || return 1
-        tar -xzf wings.tar.gz && rm -f wings.tar.gz
+        tar -xzf wings.tar.gz -C "$WINGSDIR" && rm -f wings.tar.gz
         ;;
       git_clone)
         git clone --depth 1 --branch "$TAG" "$GIT_URL" wings || return 1
@@ -203,39 +197,36 @@ ptdl_dl() {
     esac
     
     return 0
+  }
 
-# Try download methods in sequence
+  # Try download methods in sequence
   for method in curl_zip wget_zip curl_tar wget_tar git_clone; do
     if download_attempt "$method"; then
-      # Verify extracted files
+      # Move the directory if the downloaded content is inside another folder like "wings-$TAG"
       if [ -d "wings-$TAG" ]; then
         mv "wings-$TAG" wings
       fi
       
       if [ -d "wings" ]; then
         success "Successfully downloaded wings files using $method"
-        return 0
+        break
       fi
     fi
-    echo "Download method $method failed, trying next option..."
+    echo "Download method $method failed, trying next..."
     sleep 2
   done
 
-  error "All download methods failed!"
-  echo "Possible reasons:"
-  echo "1. Network connectivity issues"
-  echo "2. GitHub rate limiting"
-  echo "3. Tag $TAG doesn't exist in repository"
-  echo "4. Insufficient disk space"
-  exit 1
+  # Set execute permissions
+  chmod -R u+x "$WINGSDIR"
 
+  # Download the binary for Wings
   mkdir -p /etc/pterodactyl
   curl -L -o /usr/local/bin/wings "$WINGS_DL_BASE_URL$ARCH"
-
   chmod u+x /usr/local/bin/wings
 
   success "Pterodactyl Wings downloaded successfully"
 }
+
 install_golang() {
   output "Installing Go 1.22.1..."
   wget https://go.dev/dl/go1.22.1.linux-amd64.tar.gz -O /tmp/go.tar.gz
