@@ -28,66 +28,60 @@ set -e
 #                                                                                    #
 ######################################################################################
 
-# ------------------ Force Download lib.sh ----------------- #
-export GITHUB_BASE_URL="https://raw.githubusercontent.com/ghost-dev-gr/pterodactyl-installer"
-export GITHUB_SOURCE="v1.1.1"
-export SCRIPT_RELEASE="v1.1.1"
-
-# Function to forcefully download lib.sh
-force_download_lib() {
-    echo "=> Ensuring /tmp directory exists..."
-    mkdir -p /tmp
-    
-    echo "=> Removing any existing lib.sh..."
-    rm -f /tmp/lib.sh
-    
-    echo "=> Attempting to download lib.sh..."
-    
-    # Try multiple download methods and sources
-    declare -a download_urls=(
-        "$GITHUB_BASE_URL/master/lib/lib.sh"
-        "$GITHUB_BASE_URL/$GITHUB_SOURCE/lib/lib.sh"
-        "https://cdn.jsdelivr.net/gh/ghost-dev-gr/pterodactyl-installer@master/lib/lib.sh"
-    )
-    
-    for url in "${download_urls[@]}"; do
-        echo "==> Trying $url"
-        if curl -sSL -o /tmp/lib.sh "$url" || wget -q -O /tmp/lib.sh "$url"; then
-            if [ -s "/tmp/lib.sh" ]; then
-                echo "=> Successfully downloaded lib.sh from $url"
-                return 0
-            fi
-            echo "==> Downloaded empty file, trying next source..."
-        else
-            echo "==> Download failed, trying next source..."
-        fi
-        sleep 1
-    done
-    
-    echo "ERROR: All download attempts failed!"
-    exit 1
-}
-
+# ------------------ Local lib.sh Setup ----------------- #
 # Function to check if a function exists
 fn_exists() { declare -F "$1" >/dev/null; }
 
 # ------------------ Load lib.sh ----------------- #
 if ! fn_exists lib_loaded; then
-    force_download_lib
+    echo "=> Preparing to load lib.sh..."
     
-    # Verify the download
-    if [ ! -f "/tmp/lib.sh" ] || [ ! -s "/tmp/lib.sh" ]; then
-        echo "ERROR: Downloaded lib.sh is empty or missing!"
-        exit 1
+    # First try to source from /tmp (if it exists)
+    if [ -f "/tmp/lib.sh" ]; then
+        echo "=> Found lib.sh in /tmp, attempting to load..."
+        # shellcheck source=/tmp/lib.sh
+        source /tmp/lib.sh && {
+            if fn_exists lib_loaded; then
+                echo "=> Successfully loaded lib.sh from /tmp"
+                # Exit this section if successfully loaded
+                true
+            else
+                echo "=> lib.sh in /tmp appears invalid, trying local copy..."
+            fi
+        } || {
+            echo "=> Failed to load lib.sh from /tmp, trying local copy..."
+        }
     fi
     
-    # shellcheck source=/tmp/lib.sh
-    source /tmp/lib.sh || { echo "ERROR: Failed to load lib.sh"; exit 1; }
-    
-    # Verify lib.sh was properly loaded
+    # If not loaded from /tmp, try local copy
     if ! fn_exists lib_loaded; then
-        echo "ERROR: lib.sh did not load correctly"
-        exit 1
+        # Get the directory where this script is located
+        SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+        LOCAL_LIB="${SCRIPT_DIR}/lib.sh"
+        
+        if [ -f "$LOCAL_LIB" ]; then
+            echo "=> Found local lib.sh, copying to /tmp..."
+            mkdir -p /tmp
+            cp "$LOCAL_LIB" /tmp/lib.sh
+            chmod +x /tmp/lib.sh
+            
+            echo "=> Loading local lib.sh from /tmp..."
+            # shellcheck source=/tmp/lib.sh
+            source /tmp/lib.sh || {
+                echo "ERROR: Failed to load local lib.sh"
+                exit 1
+            }
+            
+            if ! fn_exists lib_loaded; then
+                echo "ERROR: Local lib.sh did not load correctly"
+                exit 1
+            fi
+            echo "=> Successfully loaded local lib.sh"
+        else
+            echo "ERROR: Could not find lib.sh in local directory"
+            echo "Please ensure lib.sh exists in the same directory as this script"
+            exit 1
+        fi
     fi
 fi
 
