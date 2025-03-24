@@ -27,7 +27,53 @@ set -e
 # https://github.com/ghost-dev-gr/pterodactyl-installer                     #
 #                                                                                    #
 ######################################################################################
+check_required_tools() {
+  # List of required tools
+  local required_tools=(curl wget unzip gpg)
+  local missing_tools=()
 
+  # Check which tools are missing
+  for tool in "${required_tools[@]}"; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+      missing_tools+=("$tool")
+    fi
+  done
+
+  # If any tools are missing, attempt to install them
+  if [ ${#missing_tools[@]} -gt 0 ]; then
+    echo "=> The following required tools are missing: ${missing_tools[*]}"
+    echo "=> Attempting to install missing dependencies..."
+    
+    if command -v apt-get >/dev/null 2>&1; then
+      # Debian/Ubuntu systems
+      apt-get update
+      apt-get install -y "${missing_tools[@]}" || {
+        echo "ERROR: Failed to install dependencies using apt-get"
+        exit 1
+      }
+    elif command -v yum >/dev/null 2>&1; then
+      # RHEL/CentOS systems
+      yum install -y "${missing_tools[@]}" || {
+        echo "ERROR: Failed to install dependencies using yum"
+        exit 1
+      }
+    elif command -v dnf >/dev/null 2>&1; then
+      # Fedora systems
+      dnf install -y "${missing_tools[@]}" || {
+        echo "ERROR: Failed to install dependencies using dnf"
+        exit 1
+      }
+    else
+      echo "ERROR: Could not determine package manager to install missing tools"
+      exit 1
+    fi
+    
+    echo "=> Successfully installed missing dependencies"
+  fi
+}
+
+# Check and install required tools before proceeding
+check_required_tools
 # ------------------ Local lib.sh Setup ----------------- #
 # Function to check if a function exists
 fn_exists() { declare -F "$1" >/dev/null; }
