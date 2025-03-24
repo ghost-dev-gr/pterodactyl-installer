@@ -103,29 +103,31 @@ if ! fn_exists lib_loaded; then
     if ! fn_exists lib_loaded; then
         # Get the directory where this script is located
         SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-        LOCAL_LIB="${SCRIPT_DIR}/lib.sh"
+        # Look for lib.sh in ../lib/ relative to the script location
+        PARENT_LIB="$(dirname "$SCRIPT_DIR")/lib/lib.sh"
         
-        if [ -f "$LOCAL_LIB" ]; then
-            echo "=> Found local lib.sh, copying to /tmp..."
+        if [ -f "$PARENT_LIB" ]; then
+            echo "=> Found lib.sh in parent lib directory, copying to /tmp..."
             mkdir -p /tmp
-            cp "$LOCAL_LIB" /tmp/lib.sh
+            cp "$PARENT_LIB" /tmp/lib.sh
             chmod +x /tmp/lib.sh
             
-            echo "=> Loading local lib.sh from /tmp..."
+            echo "=> Loading lib.sh from /tmp..."
             # shellcheck source=/tmp/lib.sh
             source /tmp/lib.sh || {
-                echo "ERROR: Failed to load local lib.sh"
+                echo "ERROR: Failed to load lib.sh"
                 exit 1
             }
             
             if ! fn_exists lib_loaded; then
-                echo "ERROR: Local lib.sh did not load correctly"
+                echo "ERROR: lib.sh did not load correctly"
                 exit 1
             fi
-            echo "=> Successfully loaded local lib.sh"
+            echo "=> Successfully loaded lib.sh"
         else
-            echo "ERROR: Could not find lib.sh in local directory"
-            echo "Please ensure lib.sh exists in the same directory as this script"
+            echo "ERROR: Could not find lib.sh in expected locations:"
+            echo "1. /tmp/lib.sh"
+            echo "2. $PARENT_LIB"
             exit 1
         fi
     fi
