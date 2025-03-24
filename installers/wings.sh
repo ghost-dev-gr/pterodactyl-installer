@@ -210,10 +210,9 @@ dep_install() {
 ptdl_dl() {
   output "Downloading custom wings files..."
   
-  # Create wings directory
-  WINGSDIR="/usr/local/bin/wings"
-  mkdir -p "$WINGSDIR"
-  cd "$WINGSDIR" || exit
+  # Create temporary working directory
+  TEMP_WINGSDIR="$(mktemp -d)"
+  cd "$TEMP_WINGSDIR" || exit
 
   rm -rf wings wings-* wings.zip wings.tar.gz 2>/dev/null
 
@@ -257,22 +256,22 @@ ptdl_dl() {
       curl_zip)
         curl -L -o wings.zip "$ZIP_URL" || return 1
         validate_file "wings.zip" || return 1
-        unzip -o wings.zip -d "$WINGSDIR" && rm -f wings.zip
+        unzip -o wings.zip && rm -f wings.zip
         ;;
       wget_zip)
         wget -O wings.zip "$ZIP_URL" || return 1
         validate_file "wings.zip" || return 1
-        unzip -o wings.zip -d "$WINGSDIR" && rm -f wings.zip
+        unzip -o wings.zip && rm -f wings.zip
         ;;
       curl_tar)
         curl -L -o wings.tar.gz "$TAR_URL" || return 1
         validate_file "wings.tar.gz" || return 1
-        tar -xzf wings.tar.gz -C "$WINGSDIR" && rm -f wings.tar.gz
+        tar -xzf wings.tar.gz && rm -f wings.tar.gz
         ;;
       wget_tar)
         wget -O wings.tar.gz "$TAR_URL" || return 1
         validate_file "wings.tar.gz" || return 1
-        tar -xzf wings.tar.gz -C "$WINGSDIR" && rm -f wings.tar.gz
+        tar -xzf wings.tar.gz && rm -f wings.tar.gz
         ;;
       git_clone)
         git clone --depth 1 --branch "$TAG" "$GIT_URL" wings || return 1
@@ -282,19 +281,38 @@ ptdl_dl() {
         ;;
     esac
     
+    # Find the actual wings directory (could be wings or wings-VERSION)
+    local wings_dir
+    wings_dir=$(find . -maxdepth 1 -type d -name "wings*" | head -n 1)
+    
+    if [ -z "$wings_dir" ]; then
+      echo "Error: No wings directory found after extraction"
+      return 1
+    fi
+
+    # If the directory is named with version (wings-1.11.10), rename it to just wings
+    if [[ "$wings_dir" != "./wings" ]]; then
+      mv "$wings_dir" "wings"
+    fi
+    
     return 0
   }
 
   # Try download methods in sequence
   for method in curl_zip wget_zip curl_tar wget_tar git_clone; do
     if download_attempt "$method"; then
-      # Move the directory if the downloaded content is inside another folder like "wings-$TAG"
-      if [ -d "wings-$TAG" ]; then
-        mv "wings-$TAG" wings
-      fi
-      
+      # Verify we have a wings directory
       if [ -d "wings" ]; then
-        success "Successfully downloaded wings files using $method"
+        # Create target directory
+        mkdir -p /usr/local/bin/wings
+        
+        # Move contents to target directory (not the directory itself)
+        mv wings/* /usr/local/bin/wings/
+        
+        # Clean up
+        rm -rf wings
+        
+        success "Successfully downloaded and installed wings files using $method"
         break
       fi
     fi
@@ -302,15 +320,18 @@ ptdl_dl() {
     sleep 2
   done
 
+  # Clean up temp directory
+  cd /tmp && rm -rf "$TEMP_WINGSDIR"
+
   # Set execute permissions
-  chmod -R u+x "$WINGSDIR"
+  chmod -R u+x /usr/local/bin/wings
 
   # Download the binary for Wings
   mkdir -p /etc/pterodactyl
-  curl -L -o /usr/local/bin/wings "$WINGS_DL_BASE_URL$ARCH"
-  chmod u+x /usr/local/bin/wings
+  curl -L -o /usr/local/bin/wings/wings "$WINGS_DL_BASE_URL$ARCH"
+  chmod u+x /usr/local/bin/wings/wings
 
-  success "Pterodactyl Wings downloaded successfully"
+  success "Pterodactyl Wings downloaded and installed successfully"
 }
 
 install_golang() {
