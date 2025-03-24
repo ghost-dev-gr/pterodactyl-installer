@@ -144,15 +144,23 @@ ptdl_dl() {
   success "Custom panel repository downloaded successfully!"
 
   output "Installing Node.js and Yarn..."
-  curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+  # Install current LTS version of Node.js (20.x as of 2023)
+  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
   sudo apt-get install -y nodejs
-  npm install -g yarn
+  
+  # Install Yarn and required global packages
+  npm install -g yarn cross-env
 
   output "Installing panel dependencies with Yarn..."
-  yarn install --production
+  # Install with --ignore-engines to handle any Node version warnings
+  yarn install --production --ignore-engines
 
   output "Building panel assets..."
-  yarn build:production
+  # Explicitly install required packages that might be missing
+  yarn add cross-env --dev
+  
+  # Build assets with production settings
+  yarn run build:production
   
   cp .env.example .env
 
