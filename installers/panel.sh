@@ -104,33 +104,65 @@ install_composer() {
 }
 
 ptdl_dl() {
-  output "Downloading pterodactyl panel files .. "
+  output "Downloading pterodactyl panel files..."
+  
+  # Create temporary working directory
+  TEMP_PANELDIR="$(mktemp -d)"
+  cd "$TEMP_PANELDIR" || exit
 
-  mkdir -p /var/www/pterodactyl
-  cd /var/www/pterodactyl || exit
+  output "Downloading panel from: $PANEL_DL_URL"
+  curl -Lo panel.tar.gz "$PANEL_DL_URL" || {
+    error "Failed to download panel files"
+    exit 1
+  }
 
-  output "Cloning your custom panel from: https://github.com/ghost-dev-gr/panel"
-
-  curl -Lo panel.tar.gz "$PANEL_DL_URL"
+  # Extract the panel files
   tar -xzvf panel.tar.gz
-  success "Custom panel repository downloaded successfully!"
-  chmod -R 755 storage/* bootstrap/cache/
-  output "Set correct permissions for storage and cache directories."
- 
+  rm -f panel.tar.gz
+
+  # Find the extracted directory (could be panel or panel-VERSION)
+  local panel_dir
+  panel_dir=$(find . -maxdepth 1 -type d -name "panel*" | head -n 1)
+  
+  if [ -z "$panel_dir" ]; then
+    error "No panel directory found after extraction"
+    exit 1
+  fi
+
+  # Create target directory
+  mkdir -p /var/www/pterodactyl
+
+  # If the directory is named with version (panel-1.11.10), move its contents
+  if [[ "$panel_dir" != "./panel" ]]; then
+    output "Moving contents from $panel_dir to /var/www/pterodactyl"
+    mv "$panel_dir"/* /var/www/pterodactyl/
+    rm -rf "$panel_dir"
+  else
+    # If it's already named panel, just move the whole directory
+    mv panel /var/www/pterodactyl
+  fi
+
+  # Clean up temp directory
+  cd /tmp && rm -rf "$TEMP_PANELDIR"
+
+  # Set proper permissions
+  chmod -R 755 /var/www/pterodactyl/storage/* /var/www/pterodactyl/bootstrap/cache/
+
   output "Installing Node.js and Yarn..."
   curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash -
   sudo apt-get install -y nodejs
   npm install -g yarn
 
-  success "Installing panel dependencies with Yarn..."
+  output "Installing panel dependencies with Yarn..."
+  cd /var/www/pterodactyl
   yarn install --production
 
-  success "Building panel assets..."
+  output "Building panel assets..."
   yarn build:production
   
   cp .env.example .env
 
-  success "Downloaded pterodactyl panel files!"
+  success "Panel files downloaded and installed successfully!"
 }
 
 install_composer_deps() {
