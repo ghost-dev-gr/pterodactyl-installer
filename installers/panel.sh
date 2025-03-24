@@ -116,11 +116,11 @@ ptdl_dl() {
     exit 1
   }
 
-  # Extract the panel files directly into the target directory
+  # Extract the panel files
   tar -xzvf panel.tar.gz
   rm -f panel.tar.gz
 
-  # Find the extracted directory (could be panel or panel-VERSION)
+  # Handle extracted directory
   local panel_dir
   panel_dir=$(find . -maxdepth 1 -type d -name "panel*" | head -n 1)
   
@@ -129,44 +129,43 @@ ptdl_dl() {
     exit 1
   fi
 
-  # If the directory is named with version (panel-1.11.10), move its contents up
   if [[ "$panel_dir" != "./panel" ]]; then
     output "Moving contents from $panel_dir to /var/www/pterodactyl"
     mv "$panel_dir"/* .
     rmdir "$panel_dir"
   fi
 
-  # Create required directories if they don't exist
+  # Create required directories
   mkdir -p storage bootstrap/cache
-
-  # Set proper permissions
   chmod -R 755 storage bootstrap/cache
-  success "Custom panel repository downloaded successfully!"
+  success "Panel files downloaded successfully!"
 
-  output "Installing Node.js and Yarn..."
-  # Install current LTS version of Node.js (20.x as of 2023)
+  # Install Node.js 20.x (current LTS)
+  output "Installing Node.js 20.x..."
   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
   sudo apt-get install -y nodejs
-  
+
   # Install Yarn and required global packages
+  output "Installing Yarn and build tools..."
   npm install -g yarn cross-env
 
-  output "Installing panel dependencies with Yarn..."
-  # Install with --ignore-engines to handle any Node version warnings
+  # Install panel dependencies
+  output "Installing panel dependencies..."
   yarn install --production --ignore-engines
 
+  # Fix missing peer dependencies
+  output "Fixing peer dependencies..."
+  yarn add react-is@^16.8.0 styled-components@^5.2.1 --dev
+
+  # Build assets
   output "Building panel assets..."
-  # Explicitly install required packages that might be missing
   yarn add cross-env --dev
-  
-  # Build assets with production settings
   yarn run build:production
   
   cp .env.example .env
 
-  success "Panel files downloaded and installed successfully!"
+  success "Panel installation completed successfully!"
 }
-
 
 install_composer_deps() {
   output "Installing composer dependencies.."
