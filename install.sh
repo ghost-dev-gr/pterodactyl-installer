@@ -34,97 +34,18 @@ export GITHUB_BASE_URL="https://raw.githubusercontent.com/ghost-dev-gr/pterodact
 
 LOG_PATH="/var/log/pterodactyl-installer.log"
 
-# Enhanced dependency checking
-check_dependencies() {
-  local missing=()
-  for cmd in curl wget; do
-    if ! command -v "$cmd" &>/dev/null; then
-      missing+=("$cmd")
-    fi
-  done
-
-  if [ ${#missing[@]} -gt 0 ]; then
-    echo "* The following required commands are missing: ${missing[*]}"
-    echo "* Attempting to install automatically..."
-    
-    if command -v apt-get &>/dev/null; then
-      apt-get update && apt-get install -y "${missing[@]}" || {
-        echo "* Automatic installation failed. Please install manually:"
-        echo "  sudo apt-get install ${missing[*]}"
-        exit 1
-      }
-    elif command -v yum &>/dev/null; then
-      yum install -y "${missing[@]}" || {
-        echo "* Automatic installation failed. Please install manually:"
-        echo "  sudo yum install ${missing[*]}"
-        exit 1
-      }
-    elif command -v dnf &>/dev/null; then
-      dnf install -y "${missing[@]}" || {
-        echo "* Automatic installation failed. Please install manually:"
-        echo "  sudo dnf install ${missing[*]}"
-        exit 1
-      }
-    else
-      echo "* Could not determine package manager. Please install manually:"
-      echo "  ${missing[*]}"
-      exit 1
-    fi
-  fi
-}
-
-check_dependencies
-
-# Robust lib.sh download with multiple fallbacks
-download_lib() {
-  local lib_urls=(
-    "$GITHUB_BASE_URL/master/lib/lib.sh"
-    "$GITHUB_BASE_URL/$GITHUB_SOURCE/lib/lib.sh"
-    "https://cdn.jsdelivr.net/gh/ghost-dev-gr/pterodactyl-installer@master/lib/lib.sh"
-  )
-
-  # Clean up any existing file
-  rm -f /tmp/lib.sh
-
-  for url in "${lib_urls[@]}"; do
-    echo "* Attempting to download lib.sh from $url"
-    if curl -sSL -o /tmp/lib.sh "$url" || wget -q -O /tmp/lib.sh "$url"; then
-      if [ -s "/tmp/lib.sh" ]; then
-        echo "* Successfully downloaded lib.sh"
-        return 0
-      fi
-      echo "* Downloaded empty file, trying next source..."
-    else
-      echo "* Download failed, trying next source..."
-    fi
-    sleep 1
-  done
-
-  echo -e "\n* ERROR: Failed to download lib.sh from all sources!"
-  echo "* Possible reasons:"
-  echo "  1. No internet connection"
-  echo "  2. GitHub/CDN is down"
-  echo "  3. Repository was moved/renamed"
-  echo "* Please check your connection and try again."
+# check for curl
+if ! [ -x "$(command -v curl)" ]; then
+  echo "* curl is required in order for this script to work."
+  echo "* install using apt (Debian and derivatives) or yum/dnf (CentOS)"
   exit 1
-}
+fi
 
-# Validate and source lib.sh
-load_lib() {
-  if ! source /tmp/lib.sh; then
-    echo "* ERROR: Failed to load lib.sh - file may be corrupted"
-    echo "* Trying to download again..."
-    download_lib
-    if ! source /tmp/lib.sh; then
-      echo "* FATAL: Still cannot load lib.sh"
-      exit 1
-    fi
-  fi
-}
-
-# Main download and load process
-download_lib
-load_lib
+# Always remove lib.sh, before downloading it
+[ -f /tmp/lib.sh ] && rm -rf /tmp/lib.sh
+curl -sSL -o /tmp/lib.sh "$GITHUB_BASE_URL"/master/lib/lib.sh
+# shellcheck source=lib/lib.sh
+source /tmp/lib.sh
 
 execute() {
   echo -e "\n\n* pterodactyl-installer $(date) \n\n" >>$LOG_PATH

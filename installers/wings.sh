@@ -28,27 +28,70 @@ set -e
 #                                                                                    #
 ######################################################################################
 
-# Check for essential utilities
-check_required_tools() {
-  for cmd in curl wget unzip gpg; do
-    command -v "$cmd" >/dev/null 2>&1 || { echo "Error: $cmd is required but not installed."; exit 1; }
-  done
+# ------------------ Force Download lib.sh ----------------- #
+export GITHUB_BASE_URL="https://raw.githubusercontent.com/ghost-dev-gr/pterodactyl-installer"
+export GITHUB_SOURCE="v1.1.1"
+export SCRIPT_RELEASE="v1.1.1"
+
+# Function to forcefully download lib.sh
+force_download_lib() {
+    echo "=> Ensuring /tmp directory exists..."
+    mkdir -p /tmp
+    
+    echo "=> Removing any existing lib.sh..."
+    rm -f /tmp/lib.sh
+    
+    echo "=> Attempting to download lib.sh..."
+    
+    # Try multiple download methods and sources
+    declare -a download_urls=(
+        "$GITHUB_BASE_URL/master/lib/lib.sh"
+        "$GITHUB_BASE_URL/$GITHUB_SOURCE/lib/lib.sh"
+        "https://cdn.jsdelivr.net/gh/ghost-dev-gr/pterodactyl-installer@master/lib/lib.sh"
+    )
+    
+    for url in "${download_urls[@]}"; do
+        echo "==> Trying $url"
+        if curl -sSL -o /tmp/lib.sh "$url" || wget -q -O /tmp/lib.sh "$url"; then
+            if [ -s "/tmp/lib.sh" ]; then
+                echo "=> Successfully downloaded lib.sh from $url"
+                return 0
+            fi
+            echo "==> Downloaded empty file, trying next source..."
+        else
+            echo "==> Download failed, trying next source..."
+        fi
+        sleep 1
+    done
+    
+    echo "ERROR: All download attempts failed!"
+    exit 1
 }
 
-mkdir -p /var/www/pterodactyl
-
-# Check if script is loaded, load if not or fail otherwise.
+# Function to check if a function exists
 fn_exists() { declare -F "$1" >/dev/null; }
 
-check_required_tools
-
+# ------------------ Load lib.sh ----------------- #
 if ! fn_exists lib_loaded; then
-  # shellcheck source=lib/lib.sh
-  source /tmp/lib.sh || source <(curl -sSL "$GITHUB_BASE_URL/$GITHUB_SOURCE"/lib/lib.sh)
-  ! fn_exists lib_loaded && echo "* ERROR: Could not load lib script" && exit 1
+    force_download_lib
+    
+    # Verify the download
+    if [ ! -f "/tmp/lib.sh" ] || [ ! -s "/tmp/lib.sh" ]; then
+        echo "ERROR: Downloaded lib.sh is empty or missing!"
+        exit 1
+    fi
+    
+    # shellcheck source=/tmp/lib.sh
+    source /tmp/lib.sh || { echo "ERROR: Failed to load lib.sh"; exit 1; }
+    
+    # Verify lib.sh was properly loaded
+    if ! fn_exists lib_loaded; then
+        echo "ERROR: lib.sh did not load correctly"
+        exit 1
+    fi
 fi
-# ------------------ Variables ----------------- #
 
+# ------------------ Variables ----------------- #
 INSTALL_MARIADB="${INSTALL_MARIADB:-false}"
 
 # firewall
@@ -121,6 +164,7 @@ dep_install() {
 
   success "Dependencies installed!"
 }
+
 ptdl_dl() {
   output "Downloading custom wings files..."
   
@@ -235,7 +279,6 @@ install_golang() {
   echo 'export PATH=$PATH:/usr/local/go/bin' >> /etc/profile
   source /etc/profile
 }
-
 
 systemd_file() {
   output "Installing systemd service.."
