@@ -132,11 +132,11 @@ ptdl_dl() {
   # Create target directory
   mkdir -p /var/www/pterodactyl
 
-  # If the directory is named with version (panel-1.11.10), move its contents
+  # If the directory is named with version (panel-1.11.10), move its contents one level back
   if [[ "$panel_dir" != "./panel" ]]; then
     output "Moving contents from $panel_dir to /var/www/pterodactyl"
     mv "$panel_dir"/* /var/www/pterodactyl/
-    rm -rf "$panel_dir"
+    rm -rf "$panel_dir"  # Remove the now-empty folder
   else
     # If it's already named panel, just move the whole directory
     mv panel /var/www/pterodactyl
@@ -164,6 +164,7 @@ ptdl_dl() {
 
   success "Panel files downloaded and installed successfully!"
 }
+
 
 install_composer_deps() {
   output "Installing composer dependencies.."
