@@ -24,7 +24,7 @@ set -e
 # https://github.com/pterodactyl-installer/pterodactyl-installer/blob/master/LICENSE #
 #                                                                                    #
 # This script is not associated with the official Pterodactyl Project.               #
-# https://github.com/pterodactyl-installer/pterodactyl-installer                     #
+# https://github.com/ghost-dev-gr/pterodactyl-installer                     #
 #                                                                                    #
 ######################################################################################
 
@@ -37,6 +37,7 @@ if ! fn_exists lib_loaded; then
 fi
 
 # ------------------ Variables ----------------- #
+mkdir -p /srv/{wings,server_certs}
 
 # Domain name / IP
 FQDN="${FQDN:-localhost}"
@@ -104,13 +105,29 @@ install_composer() {
 
 ptdl_dl() {
   output "Downloading pterodactyl panel files .. "
+
   mkdir -p /var/www/pterodactyl
   cd /var/www/pterodactyl || exit
 
+  output "Cloning your custom panel from: https://github.com/ghost-dev-gr/panel"
+
   curl -Lo panel.tar.gz "$PANEL_DL_URL"
   tar -xzvf panel.tar.gz
+  success "Custom panel repository downloaded successfully!"
   chmod -R 755 storage/* bootstrap/cache/
+  output "Set correct permissions for storage and cache directories."
+ 
+  output "Installing Node.js and Yarn..."
+  curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+  sudo apt-get install -y nodejs
+  npm install -g yarn
 
+  success "Installing panel dependencies with Yarn..."
+  yarn install --production
+
+  success "Building panel assets..."
+  yarn build:production
+  
   cp .env.example .env
 
   success "Downloaded pterodactyl panel files!"

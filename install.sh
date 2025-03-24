@@ -24,13 +24,13 @@ set -e
 # https://github.com/pterodactyl-installer/pterodactyl-installer/blob/master/LICENSE #
 #                                                                                    #
 # This script is not associated with the official Pterodactyl Project.               #
-# https://github.com/pterodactyl-installer/pterodactyl-installer                     #
+# https://github.com/ghost-dev-gr/pterodactyl-installer                     #
 #                                                                                    #
 ######################################################################################
 
 export GITHUB_SOURCE="v1.1.1"
 export SCRIPT_RELEASE="v1.1.1"
-export GITHUB_BASE_URL="https://raw.githubusercontent.com/pterodactyl-installer/pterodactyl-installer"
+export GITHUB_BASE_URL="https://raw.githubusercontent.com/ghost-dev-gr/pterodactyl-installer"
 
 LOG_PATH="/var/log/pterodactyl-installer.log"
 
