@@ -206,9 +206,6 @@ ptdl_dl() {
     @babel/plugin-proposal-nullish-coalescing-operator@7.18.6 \
     @babel/plugin-proposal-optional-chaining@7.21.0
 
-  # Remove duplicate babel config if exists
-  rm -f babel.config.js
-
   # Create babel configuration
   cat > babel.config.json <<EOL
 {
@@ -224,19 +221,26 @@ ptdl_dl() {
 }
 EOL
 
-  # Fix FontAwesome icon type issues
-  find resources/scripts -type f -name "*.tsx" -exec sed -i \
-    -e "s/faUserLock/faLock/g" \
-    -e "s/faUnlockAlt/faUnlock/g" \
-    -e "s/faPencilAlt/faPen/g" {} +
-
-  # Update react-router imports
-  find resources/scripts -type f -name "*.tsx" -exec sed -i \
-    -e "s/from 'react-router'/from 'react-router-dom@5'/g" \
-    -e "s/from 'react-router-dom'/from 'react-router-dom@5'/g" {} +
-
-  # Install specific react-router-dom version
-  yarn add react-router-dom@5.3.4 @types/react-router-dom@5.3.3
+  # Update webpack configuration
+  if [ -f "webpack.config.js" ]; then
+    sed -i '/module:/a \
+      rules: [\
+        {\
+          test: /\.(js|jsx|ts|tsx)$/,\
+          exclude: /node_modules\/(?!@tanstack)/,\
+          use: {\
+            loader: "babel-loader",\
+            options: {\
+              presets: ["@babel/preset-env", "@babel/preset-react", "@babel/preset-typescript"],\
+              plugins: [\
+                "@babel/plugin-proposal-nullish-coalescing-operator",\
+                "@babel/plugin-proposal-optional-chaining"\
+              ]\
+            }\
+          }\
+        }\
+      ],' webpack.config.js
+  fi
 
   # Build assets
   output "Building panel assets..."
