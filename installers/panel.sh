@@ -177,58 +177,65 @@ ptdl_dl() {
   # Fix styled-components macro imports
   find resources/scripts -type f \( -name "*.ts" -o -name "*.tsx" \) -exec sed -i "s/'styled-components\/macro'/'styled-components'/g" {} +
 
-  # Install compatible babel packages
- yarn add -D \
-  babel-loader@8.3.0 \
-  @babel/core@7.26.10 \
-  @babel/plugin-transform-runtime@7.26.10 \
-  @babel/plugin-transform-react-jsx@7.18.6 \
-  @babel/plugin-proposal-class-properties@7.18.6 \
-  @babel/plugin-proposal-object-rest-spread@7.20.7 \
-  @babel/plugin-syntax-dynamic-import@7.8.3 \
-  @babel/plugin-proposal-nullish-coalescing-operator@7.18.6 \
-  @babel/plugin-proposal-optional-chaining@7.21.0
+  # Install compatible babel packages with core-js runtime
+  yarn add -D \
+    babel-loader@8.3.0 \
+    @babel/core@7.26.10 \
+    @babel/runtime-corejs3@7.26.10 \
+    @babel/plugin-transform-runtime@7.26.10 \
+    @babel/plugin-transform-react-jsx@7.18.6 \
+    @babel/plugin-proposal-class-properties@7.18.6 \
+    @babel/plugin-proposal-object-rest-spread@7.20.7 \
+    @babel/plugin-syntax-dynamic-import@7.8.3 \
+    @babel/plugin-proposal-nullish-coalescing-operator@7.18.6 \
+    @babel/plugin-proposal-optional-chaining@7.21.0 \
+    core-js@3
 
   # Remove any existing Babel configs
   rm -f babel.config.js babel.config.json
 
- # Create comprehensive Babel configuration
-cat > babel.config.js <<'EOL'
+  # Create comprehensive Babel configuration
+  cat > babel.config.js <<'EOL'
 module.exports = function (api) {
-    let targets = {};
+    api.cache(true);
+    
     const plugins = [
         'babel-plugin-macros',
         'styled-components',
         'react-hot-loader/babel',
         ['@babel/plugin-transform-runtime', {
-            corejs: 3
+            corejs: 3,
+            helpers: true,
+            regenerator: true,
+            useESModules: false
         }],
         '@babel/plugin-transform-react-jsx',
         '@babel/plugin-proposal-class-properties',
         '@babel/plugin-proposal-object-rest-spread',
         '@babel/plugin-proposal-optional-chaining',
         '@babel/plugin-proposal-nullish-coalescing-operator',
-        '@babel/plugin-syntax-dynamic-import',
+        '@babel/plugin-syntax-dynamic-import'
+    ];
+
+    const presets = [
+        '@babel/preset-typescript',
+        ['@babel/preset-env', {
+            modules: false,
+            useBuiltIns: 'entry',
+            corejs: 3,
+            targets: {
+                browsers: ['> 1%', 'last 2 versions', 'not ie <= 11']
+            }
+        }],
+        '@babel/preset-react'
     ];
 
     if (api.env('test')) {
-        targets = { node: 'current' };
         plugins.push('@babel/plugin-transform-modules-commonjs');
+        presets[1][1].targets = { node: 'current' };
     }
 
-    return {
-        plugins,
-        presets: [
-            '@babel/preset-typescript',
-            ['@babel/preset-env', {
-                modules: false,
-                useBuiltIns: 'entry',
-                corejs: 3,
-                targets,
-            }],
-            '@babel/preset-react',
-        ]
-    };
+    return { plugins, presets };
 };
 EOL
 
