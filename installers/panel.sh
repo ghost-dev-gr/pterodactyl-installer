@@ -124,7 +124,7 @@ ptdl_dl() {
   fi
 
   # Extract files with strip-components to handle directory structure
-  tar -xzf panel.tar.gz --strip-components=1
+  tar -xzf panel.tar.gz 
   rm -f panel.tar.gz
 
   # Verify critical files exist
