@@ -196,6 +196,43 @@ ptdl_dl() {
   # Fix styled-components macro imports
   find resources/scripts -type f \( -name "*.ts" -o -name "*.tsx" \) -exec sed -i "s/'styled-components\/macro'/'styled-components'/g" {} +
 
+  # Fix for @tanstack/virtual-core by adding Babel configuration
+  cat > babel.config.json <<EOL
+{
+  "presets": [
+    "@babel/preset-env",
+    "@babel/preset-react",
+    "@babel/preset-typescript"
+  ],
+  "plugins": [
+    "@babel/plugin-proposal-nullish-coalescing-operator",
+    "@babel/plugin-proposal-optional-chaining"
+  ]
+}
+EOL
+
+  # Update webpack configuration to use Babel loader
+  sed -i '/rules:/a \
+    { \
+      test: /\.(js|jsx|ts|tsx)$/, \
+      exclude: /node_modules\/(?!@tanstack)/, \
+      use: { \
+        loader: "babel-loader", \
+        options: { \
+          presets: ["@babel/preset-env", "@babel/preset-react", "@babel/preset-typescript"], \
+          plugins: [ \
+            "@babel/plugin-proposal-nullish-coalescing-operator", \
+            "@babel/plugin-proposal-optional-chaining" \
+          ] \
+        } \
+      } \
+    },' webpack.config.js
+
+  # Install required Babel packages
+  yarn add -D @babel/core @babel/preset-env @babel/preset-react @babel/preset-typescript \
+    @babel/plugin-proposal-nullish-coalescing-operator @babel/plugin-proposal-optional-chaining \
+    babel-loader
+
   # Build assets (without legacy provider)
   output "Building panel assets..."
   unset NODE_OPTIONS  # Remove --openssl-legacy-provider
