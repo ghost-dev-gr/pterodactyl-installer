@@ -178,51 +178,55 @@ ptdl_dl() {
   find resources/scripts -type f \( -name "*.ts" -o -name "*.tsx" \) -exec sed -i "s/'styled-components\/macro'/'styled-components'/g" {} +
 
   # Install compatible babel packages
-  yarn add -D \
-    babel-loader@8.3.0 \
-    @babel/core@7.26.10 \
-    @babel/plugin-transform-runtime@7.26.10 \
-    @babel/plugin-transform-react-jsx@7.26.10 \
-    @babel/plugin-proposal-class-properties@7.26.10 \
-    @babel/plugin-proposal-object-rest-spread@7.26.10 \
-    @babel/plugin-syntax-dynamic-import@7.8.3
+ yarn add -D \
+  babel-loader@8.3.0 \
+  @babel/core@7.26.10 \
+  @babel/plugin-transform-runtime@7.26.10 \
+  @babel/plugin-transform-react-jsx@7.18.6 \
+  @babel/plugin-proposal-class-properties@7.18.6 \
+  @babel/plugin-proposal-object-rest-spread@7.20.7 \
+  @babel/plugin-syntax-dynamic-import@7.8.3 \
+  @babel/plugin-proposal-nullish-coalescing-operator@7.18.6 \
+  @babel/plugin-proposal-optional-chaining@7.21.0
 
   # Remove any existing Babel configs
   rm -f babel.config.js babel.config.json
 
-  # Create comprehensive Babel configuration
-  cat > babel.config.js <<'EOL'
+ # Create comprehensive Babel configuration
+cat > babel.config.js <<'EOL'
 module.exports = function (api) {
     let targets = {};
     const plugins = [
         'babel-plugin-macros',
         'styled-components',
         'react-hot-loader/babel',
-        '@babel/transform-runtime',
-        '@babel/transform-react-jsx',
-        '@babel/proposal-class-properties',
-        '@babel/proposal-object-rest-spread',
-        '@babel/proposal-optional-chaining',
-        '@babel/proposal-nullish-coalescing-operator',
-        '@babel/syntax-dynamic-import',
+        ['@babel/plugin-transform-runtime', {
+            corejs: 3
+        }],
+        '@babel/plugin-transform-react-jsx',
+        '@babel/plugin-proposal-class-properties',
+        '@babel/plugin-proposal-object-rest-spread',
+        '@babel/plugin-proposal-optional-chaining',
+        '@babel/plugin-proposal-nullish-coalescing-operator',
+        '@babel/plugin-syntax-dynamic-import',
     ];
 
     if (api.env('test')) {
         targets = { node: 'current' };
-        plugins.push('@babel/transform-modules-commonjs');
+        plugins.push('@babel/plugin-transform-modules-commonjs');
     }
 
     return {
         plugins,
         presets: [
-            '@babel/typescript',
-            ['@babel/env', {
+            '@babel/preset-typescript',
+            ['@babel/preset-env', {
                 modules: false,
                 useBuiltIns: 'entry',
                 corejs: 3,
                 targets,
             }],
-            '@babel/react',
+            '@babel/preset-react',
         ]
     };
 };
