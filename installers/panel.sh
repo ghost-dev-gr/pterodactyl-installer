@@ -221,25 +221,29 @@ ptdl_dl() {
 }
 EOL
 
-  # Update webpack configuration
+  # Update webpack configuration - using a more reliable method
   if [ -f "webpack.config.js" ]; then
-    sed -i '/module:/a \
-      rules: [\
-        {\
-          test: /\.(js|jsx|ts|tsx)$/,\
-          exclude: /node_modules\/(?!@tanstack)/,\
-          use: {\
-            loader: "babel-loader",\
-            options: {\
-              presets: ["@babel/preset-env", "@babel/preset-react", "@babel/preset-typescript"],\
-              plugins: [\
-                "@babel/plugin-proposal-nullish-coalescing-operator",\
-                "@babel/plugin-proposal-optional-chaining"\
-              ]\
+    # Create a backup
+    cp webpack.config.js webpack.config.js.bak
+    
+    # Use a more compatible regex pattern
+    sed -i '/module: *{/a \
+        rules: [\
+          {\
+            test: /\\\\.(js|jsx|ts|tsx)$/,\
+            exclude: /node_modules(\\/|\\\\\\\\)(?!@tanstack)/,\
+            use: {\
+              loader: "babel-loader",\
+              options: {\
+                presets: ["@babel/preset-env", "@babel/preset-react", "@babel/preset-typescript"],\
+                plugins: [\
+                  "@babel/plugin-proposal-nullish-coalescing-operator",\
+                  "@babel/plugin-proposal-optional-chaining"\
+                ]\
+              }\
             }\
           }\
-        }\
-      ],' webpack.config.js
+        ],' webpack.config.js
   fi
 
   # Build assets
