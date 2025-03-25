@@ -157,20 +157,15 @@ ptdl_dl() {
   chmod -R 755 storage bootstrap/cache
   chown -R www-data:www-data .
 
-  # Install Node.js 16.x (Recommended for this panel version)
-  output "Installing Node.js 16.x (recommended for compatibility)..."
+  # Install Node.js 16.x (LTS)
+  output "Installing Node.js 16.x..."
   
   # Clean previous installations
   sudo apt remove --purge nodejs npm -y 2>/dev/null
   
   # Install Node.js 16
-  sudo apt-get update
-  sudo apt-get install -y ca-certificates curl gnupg
-  sudo mkdir -p /etc/apt/keyrings
-  curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
-  echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_16.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
-  sudo apt-get update
-  sudo apt-get install nodejs -y
+  curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+  sudo apt-get install -y nodejs
 
   # Verify installation
   if ! node -v | grep -q 'v16'; then
@@ -183,25 +178,27 @@ ptdl_dl() {
   output "Installing build tools..."
   sudo npm install -g yarn cross-env --force
 
-  # Install dependencies
-  output "Installing dependencies..."
+  # Clean and install dependencies
+  output "Cleaning and installing dependencies..."
+  rm -rf node_modules yarn.lock
   yarn install --production --ignore-engines --network-timeout 300000
-  
-  # Fix styled-components macro imports before adding dependencies
-  find resources/scripts -type f -name "*.tsx" -exec sed -i "s/'styled-components\/macro'/'styled-components'/g" {} +
 
+  # Add required dependencies with exact versions
   yarn add \
-    cross-env \
-    react-is@^16.8.0 \
-    styled-components@5.2.1 \
-    xterm-addon-search@^0.5.0 \
-    @types/styled-components@5.1.15 \
-    redux@^4.0.0 \
-    --dev --ignore-engines
+    cross-env@7.0.3 \
+    react-is@16.13.1 \
+    styled-components@5.3.11 \
+    xterm-addon-search@0.9.0 \
+    @types/styled-components@5.1.26 \
+    redux@4.2.1 \
+    --dev --ignore-engines --exact
 
-  # Build assets
+  # Fix styled-components macro imports
+  find resources/scripts -type f \( -name "*.ts" -o -name "*.tsx" \) -exec sed -i "s/'styled-components\/macro'/'styled-components'/g" {} +
+
+  # Build assets (without legacy provider)
   output "Building panel assets..."
-  export NODE_OPTIONS=--openssl-legacy-provider
+  unset NODE_OPTIONS  # Remove --openssl-legacy-provider
   npx cross-env NODE_ENV=production webpack --mode production
 
   # Final setup
@@ -211,7 +208,6 @@ ptdl_dl() {
 
   success "Pterodactyl Panel successfully installed with Node.js $(node -v)"
 }
-
 
 install_composer_deps() {
   output "Installing composer dependencies.."
