@@ -209,6 +209,7 @@ ptdl_dl() {
   success "Pterodactyl Panel successfully installed with Node.js $(node -v)"
 }
 
+
 install_composer_deps() {
   output "Installing composer dependencies.."
   [ "$OS" == "rocky" ] || [ "$OS" == "almalinux" ] && export PATH=/usr/local/bin:$PATH
