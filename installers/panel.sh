@@ -157,12 +157,15 @@ ptdl_dl() {
   chmod -R 755 storage bootstrap/cache
   chown -R www-data:www-data .
 
-  # Install required Yarn dependencies globally (without installing Node.js)
+  # Install required Yarn dependencies
   output "Installing required Yarn dependencies..."
   if ! command -v yarn &>/dev/null; then
     error "Yarn is not installed. Please install Yarn first."
     exit 1
   fi
+
+  # Clean up any existing node_modules
+  rm -rf node_modules yarn.lock
 
   # Install specific versions of required packages
   yarn add \
@@ -172,12 +175,12 @@ ptdl_dl() {
     xterm-addon-search@0.9.0 \
     @types/styled-components@5.1.26 \
     redux@4.2.1 \
-    --dev --ignore-engines --exact
+    --ignore-engines --exact
 
   # Fix styled-components macro imports
   find resources/scripts -type f \( -name "*.ts" -o -name "*.tsx" \) -exec sed -i "s/'styled-components\/macro'/'styled-components'/g" {} +
 
-  # Install compatible babel packages
+  # Install compatible babel packages as dev dependencies
   yarn add -D \
     babel-loader@8.3.0 \
     @babel/core@7.26.10 \
@@ -202,31 +205,45 @@ ptdl_dl() {
 }
 EOL
 
-  # Update webpack configuration
+  # Fix webpack configuration
   if [ -f "webpack.config.js" ]; then
-    sed -i '/module:/a \
-      rules: [\
-        {\
-          test: /\.(js|jsx|ts|tsx)$/,\
-          exclude: /node_modules\/(?!(@tanstack)\/).*/,\
-          use: {\
-            loader: "babel-loader",\
-            options: {\
-              presets: ["@babel/preset-env", "@babel/preset-react", "@babel/preset-typescript"],\
-              plugins: [\
-                "@babel/plugin-proposal-nullish-coalescing-operator",\
-                "@babel/plugin-proposal-optional-chaining"\
-              ]\
-            }\
-          }\
+    # Backup original webpack config
+    cp webpack.config.js webpack.config.js.bak
+    
+    # Fix the problematic regex pattern
+    sed -i 's/exclude: \/node_modules\/(?!@tanstack)\/,/exclude: \/node_modules\/(?!(@tanstack)\/).*/g' webpack.config.js
+    
+    # Add proper module rules if they don't exist
+    if ! grep -q "module:" webpack.config.js; then
+      sed -i '/const path = /a \
+module: {\
+  rules: [\
+    {\
+      test: /\\\.(js|jsx|ts|tsx)$/,\
+      exclude: /node_modules\/(?!(@tanstack)\/).*/,\
+      use: {\
+        loader: "babel-loader",\
+        options: {\
+          presets: ["@babel/preset-env", "@babel/preset-react", "@babel/preset-typescript"],\
+          plugins: [\
+            "@babel/plugin-proposal-nullish-coalescing-operator",\
+            "@babel/plugin-proposal-optional-chaining"\
+          ]\
         }\
-      ],' webpack.config.js
+      }\
+    }\
+  ]\
+},' webpack.config.js
+    fi
   fi
 
   # Build assets
   output "Building panel assets..."
   export NODE_OPTIONS=--openssl-legacy-provider
-  yarn run build:production
+  yarn run build:production || {
+    error "Failed to build panel assets"
+    exit 1
+  }
 
   # Final setup
   cp .env.example .env
