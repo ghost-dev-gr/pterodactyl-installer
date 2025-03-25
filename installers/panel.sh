@@ -113,83 +113,83 @@ ptdl_dl() {
   # Download panel
   output "Downloading panel from: $PANEL_DL_URL"
   curl -Lo panel.tar.gz "$PANEL_DL_URL" || {
+  if ! curl -L "$PANEL_DL_URL" -o panel.tar.gz --fail --silent --show-error; then
     error "Failed to download panel files"
     exit 1
-  }
+  fi
 
-  # Extract files
-  tar -xzvf panel.tar.gz
+  # Verify archive integrity
+  if ! tar -tzf panel.tar.gz >/dev/null 2>&1; then
+    error "Downloaded archive is corrupt"
+    exit 1
+  fi
+
+  # Extract files with strip-components to handle directory structure
+  tar -xzf panel.tar.gz --strip-components=1
   rm -f panel.tar.gz
 
-  # Handle extracted directory
-  local panel_dir
-  panel_dir=$(find . -maxdepth 1 -type d -name "panel*" | head -n 1)
-  
-  # if [ -z "$panel_dir" ]; then
-  #   error "No panel directory found after extraction"
-  #   exit 1
-  # fi
-  if [ -z "$panel_dir" ]; then
-    error "No panel directory found after extraction"
+  # Verify critical files exist
+  if [ ! -f "artisan" ] || [ ! -d "app" ]; then
+    error "Panel files not properly extracted. Contents:"
+    ls -la
     exit 1
   fi
 
-  if [[ "$panel_dir" != "./panel" ]]; then
-    output "Moving contents from $panel_dir to /var/www/pterodactyl"
-    mv "$panel_dir"/* .
-    rmdir "$panel_dir"
-  fi
-
-  # Check if 'config' directory exists inside the extracted panel directory
-  if [ ! -d "./config" ]; then
-    error "'config' directory is missing from the extracted panel files"
-    exit 1
-  else
-    success "'config' directory found"
+  # Ensure the 'config' folder exists after extraction
+  if [ ! -d "config" ]; then
+    output "Config folder is missing, creating it."
+    mkdir config
+    # Optionally, you can add a default configuration file here if needed
+    # echo "default config settings" > config/config.yml
   fi
 
   # Set up directories with correct permissions
   mkdir -p storage bootstrap/cache
   chmod -R 755 storage bootstrap/cache
-  chown -R www-data:www-data storage bootstrap/cache
-  success "Panel files downloaded and permissions set"
+  chown -R www-data:www-data .
 
-  # Install Node.js 19.x with clean removal of previous versions
-  output "Installing Node.js 19.x..."
+  # Install Node.js 20.x (current LTS)
+  output "Installing Node.js 20.x..."
+  
+  # Clean previous installations
   sudo apt remove --purge nodejs npm -y 2>/dev/null
-  sudo rm -rf /usr/local/{lib/node_modules,bin/npm,bin/node} /usr/lib/node_modules
-  curl -fsSL https://deb.nodesource.com/setup_19.x | sudo -E bash -
-  sudo apt-get install -y nodejs
-  sudo npm install -g npm@latest
+  
+  # Install using new recommended method
+  sudo apt-get update
+  sudo apt-get install -y ca-certificates curl gnupg
+  sudo mkdir -p /etc/apt/keyrings
+  curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | sudo gpg --dearmor -o /etc/apt/keyrings/nodesource.gpg
+  echo "deb [signed-by=/etc/apt/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" | sudo tee /etc/apt/sources.list.d/nodesource.list
+  sudo apt-get update
+  sudo apt-get install nodejs -y
 
   # Verify installation
-  if ! node -v | grep -q 'v19'; then
-    error "Failed to install Node.js 19.x"
+  if ! node -v | grep -q 'v20'; then
+    error "Failed to install Node.js 20.x"
     exit 1
   fi
   success "Node.js $(node -v) installed"
 
-  # Install build tools with forced clean install
+  # Install build tools
   output "Installing build tools..."
   sudo npm install -g yarn cross-env --force
 
-  # Install dependencies with explicit fixes
-  output "Installing dependencies with fixes..."
+  # Install dependencies
+  output "Installing dependencies..."
   yarn install --production --ignore-engines --network-timeout 300000
   yarn add \
     cross-env \
-    react-is\
+    react-is \
     styled-components \
     xterm-addon-search \
     @types/styled-components \
     redux \
     --dev --ignore-engines
 
-  # Build assets with compatibility flags
+  # Build assets
   output "Building panel assets..."
   export NODE_OPTIONS=--openssl-legacy-provider
-   npx cross-env NODE_ENV=production webpack --mode production
-  ./node_modules/.bin/cross-env NODE_ENV=production ./node_modules/.bin/webpack --mode production
+  npx cross-env NODE_ENV=production webpack --mode production
 
   # Final setup
   cp .env.example .env
@@ -197,8 +197,8 @@ ptdl_dl() {
   chmod -R 755 storage bootstrap/cache
 
   success "Pterodactyl Panel successfully installed with Node.js $(node -v)"
-  warning "Note: Node.js 19.x is no longer supported. Consider upgrading to Node.js 20.x for security updates."
 }
+
 
 
 install_composer_deps() {
