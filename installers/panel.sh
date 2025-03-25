@@ -139,21 +139,22 @@ ptdl_dl() {
   # Create required directories
   mkdir -p storage bootstrap/cache
   chmod -R 755 storage bootstrap/cache
+  chown -R www-data:www-data storage bootstrap/cache
   success "Panel files downloaded successfully!"
 
   # Force Node.js 20.x installation
-  output "Forcing Node.js 20.x installation..."
+  output "Forcing Node.js 19.x installation..."
   sudo apt remove --purge nodejs npm -y 2>/dev/null
   sudo rm -rf /usr/local/bin/npm /usr/local/bin/node
   sudo rm -rf /usr/lib/node_modules
-  curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+  curl -fsSL https://deb.nodesource.com/setup_19.x | sudo -E bash -
   sudo apt-get install -y nodejs
   sudo npm install -g npm@latest
 
   # Verify Node.js version
   NODE_VERSION=$(node -v)
-  if [[ ! "$NODE_VERSION" =~ ^v20 ]]; then
-    error "Failed to install Node.js 20.x. Current version: $NODE_VERSION"
+  if [[ ! "$NODE_VERSION" =~ ^v19 ]]; then
+    error "Failed to install Node.js 19.x. Current version: $NODE_VERSION"
     exit 1
   fi
   success "Node.js $NODE_VERSION installed successfully"
@@ -162,13 +163,12 @@ ptdl_dl() {
   output "Installing Yarn and build tools..."
   sudo npm install -g yarn cross-env --force
 
-  # Install panel dependencies
-  output "Installing panel dependencies..."
+   # Install panel dependencies with fixes for known issues
+  output "Installing panel dependencies with fixes..."
   yarn install --production --ignore-engines --network-timeout 1000000
-
-  # Fix common peer dependencies
-  output "Fixing peer dependencies..."
+  yarn add cross-env --dev
   yarn add react-is@^16.8.0 styled-components@^5.2.1 xterm-addon-search@^0.5.0 --dev
+
 
   # Build assets with legacy OpenSSL provider if needed
   output "Building panel assets..."
@@ -179,8 +179,9 @@ ptdl_dl() {
   # Set up environment
   cp .env.example .env
   chown -R www-data:www-data .
-
+  chmod -R 755 storage bootstrap/cache
   success "Pterodactyl Panel installed successfully with Node.js $NODE_VERSION"
+  output "Note: Node.js 19.x is deprecated. Consider upgrading to Node.js 20.x for long-term support."
 }
 
 install_composer_deps() {
