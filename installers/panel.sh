@@ -125,10 +125,10 @@ ptdl_dl() {
   local panel_dir
   panel_dir=$(find . -maxdepth 1 -type d -name "panel*" | head -n 1)
   
-  if [ -z "$panel_dir" ]; then
-    error "No panel directory found after extraction"
-    exit 1
-  fi
+  # if [ -z "$panel_dir" ]; then
+  #   error "No panel directory found after extraction"
+  #   exit 1
+  # fi
 
   if [[ "$panel_dir" != "./panel" ]]; then
     output "Moving contents from $panel_dir to /var/www/pterodactyl"
