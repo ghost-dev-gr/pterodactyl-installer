@@ -110,9 +110,8 @@ ptdl_dl() {
   mkdir -p /var/www/pterodactyl
   cd /var/www/pterodactyl || exit
 
-  # Download panel
+  # Download panel with verification
   output "Downloading panel from: $PANEL_DL_URL"
-  curl -Lo panel.tar.gz "$PANEL_DL_URL" || {
   if ! curl -L "$PANEL_DL_URL" -o panel.tar.gz --fail --silent --show-error; then
     error "Failed to download panel files"
     exit 1
