@@ -157,19 +157,19 @@ ptdl_dl() {
   chmod -R 755 storage bootstrap/cache
   chown -R www-data:www-data .
 
-  # Install Node.js 16.x (LTS)
-  output "Installing Node.js 16.x..."
+  # Install Node.js 18.x (required for babel-loader@10)
+  output "Installing Node.js 18.x..."
   
   # Clean previous installations
   sudo apt remove --purge nodejs npm -y 2>/dev/null
   
-  # Install Node.js 16
-  curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+  # Install Node.js 18
+  curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
   sudo apt-get install -y nodejs
 
   # Verify installation
-  if ! node -v | grep -q 'v16'; then
-    error "Failed to install Node.js 16.x"
+  if ! node -v | grep -q 'v18'; then
+    error "Failed to install Node.js 18.x"
     exit 1
   fi
   success "Node.js $(node -v) installed"
@@ -196,6 +196,9 @@ ptdl_dl() {
   # Fix styled-components macro imports
   find resources/scripts -type f \( -name "*.ts" -o -name "*.tsx" \) -exec sed -i "s/'styled-components\/macro'/'styled-components'/g" {} +
 
+  # Install compatible babel-loader version
+  yarn add -D babel-loader@8.3.0 @babel/core @babel/preset-env @babel/preset-react @babel/preset-typescript
+
   # Fix for @tanstack/virtual-core by adding Babel configuration
   cat > babel.config.json <<EOL
 {
@@ -211,29 +214,7 @@ ptdl_dl() {
 }
 EOL
 
-  # Update webpack configuration to use Babel loader
-  sed -i '/rules:/a \
-    { \
-      test: /\.(js|jsx|ts|tsx)$/, \
-      exclude: /node_modules\/(?!@tanstack)/, \
-      use: { \
-        loader: "babel-loader", \
-        options: { \
-          presets: ["@babel/preset-env", "@babel/preset-react", "@babel/preset-typescript"], \
-          plugins: [ \
-            "@babel/plugin-proposal-nullish-coalescing-operator", \
-            "@babel/plugin-proposal-optional-chaining" \
-          ] \
-        } \
-      } \
-    },' webpack.config.js
-
-  # Install required Babel packages
-  yarn add -D @babel/core @babel/preset-env @babel/preset-react @babel/preset-typescript \
-    @babel/plugin-proposal-nullish-coalescing-operator @babel/plugin-proposal-optional-chaining \
-    babel-loader
-
-  # Build assets (without legacy provider)
+  # Build assets
   output "Building panel assets..."
   unset NODE_OPTIONS  # Remove --openssl-legacy-provider
   npx cross-env NODE_ENV=production webpack --mode production
@@ -245,7 +226,6 @@ EOL
 
   success "Pterodactyl Panel successfully installed with Node.js $(node -v)"
 }
-
 
 install_composer_deps() {
   output "Installing composer dependencies.."
