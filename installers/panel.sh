@@ -159,24 +159,24 @@ ptdl_dl() {
 
   # Install build tools with forced clean install
   output "Installing build tools..."
-  sudo npm install -g yarn --force
-  sudo npm install -g cross-env --force
+  sudo npm install -g yarn cross-env --force
 
   # Install dependencies with explicit fixes
   output "Installing dependencies with fixes..."
   yarn install --production --ignore-engines --network-timeout 300000
   yarn add \
     cross-env \
-    react-is@^16.8.0 \
-    styled-components@^5.2.1 \
-    xterm-addon-search@^0.5.0 \
-    @types/styled-components@^4.1.19 \
-    redux@^4.0.0 \
+    react-is\
+    styled-components \
+    xterm-addon-search \
+    @types/styled-components \
+    redux \
     --dev --ignore-engines
 
   # Build assets with compatibility flags
   output "Building panel assets..."
   export NODE_OPTIONS=--openssl-legacy-provider
+   npx cross-env NODE_ENV=production webpack --mode production
   ./node_modules/.bin/cross-env NODE_ENV=production ./node_modules/.bin/webpack --mode production
 
   # Final setup
