@@ -129,11 +129,23 @@ ptdl_dl() {
   #   error "No panel directory found after extraction"
   #   exit 1
   # fi
+  if [ -z "$panel_dir" ]; then
+    error "No panel directory found after extraction"
+    exit 1
+  fi
 
   if [[ "$panel_dir" != "./panel" ]]; then
     output "Moving contents from $panel_dir to /var/www/pterodactyl"
     mv "$panel_dir"/* .
     rmdir "$panel_dir"
+  fi
+
+  # Check if 'config' directory exists inside the extracted panel directory
+  if [ ! -d "./config" ]; then
+    error "'config' directory is missing from the extracted panel files"
+    exit 1
+  else
+    success "'config' directory found"
   fi
 
   # Set up directories with correct permissions
@@ -187,6 +199,7 @@ ptdl_dl() {
   success "Pterodactyl Panel successfully installed with Node.js $(node -v)"
   warning "Note: Node.js 19.x is no longer supported. Consider upgrading to Node.js 20.x for security updates."
 }
+
 
 install_composer_deps() {
   output "Installing composer dependencies.."
