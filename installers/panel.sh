@@ -134,8 +134,11 @@ ptdl_dl() {
     exit 1
   fi
 
-  # Ensure the 'config' folder exists after extraction
-  if [ ! -d "config" ]; then
+  # Ensure the 'cons' folder exists after extraction
+  if [ -d "cons" ]; then
+    output "Renaming 'cons' folder to 'config'."
+    mv cons config
+  elif [ ! -d "config" ]; then
     output "Config folder is missing, creating it."
     mkdir config
     # Optionally, you can add a default configuration file here if needed
