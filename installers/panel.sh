@@ -194,12 +194,21 @@ ptdl_dl() {
   # Remove any existing Babel configs
   rm -f babel.config.js babel.config.json
 
-  # Create comprehensive Babel configuration
   cat > babel.config.js <<'EOL'
-module.exports = function (api) {
-    api.cache(true);
-    
-    const plugins = [
+module.exports = {
+    presets: [
+        '@babel/preset-typescript',
+        ['@babel/preset-env', {
+            modules: false,
+            useBuiltIns: 'entry',
+            corejs: 3,
+            targets: {
+                browsers: ['> 1%', 'last 2 versions', 'not ie <= 11']
+            }
+        }],
+        '@babel/preset-react'
+    ],
+    plugins: [
         'babel-plugin-macros',
         'styled-components',
         'react-hot-loader/babel',
@@ -215,27 +224,17 @@ module.exports = function (api) {
         '@babel/plugin-proposal-optional-chaining',
         '@babel/plugin-proposal-nullish-coalescing-operator',
         '@babel/plugin-syntax-dynamic-import'
-    ];
-
-    const presets = [
-        '@babel/preset-typescript',
-        ['@babel/preset-env', {
-            modules: false,
-            useBuiltIns: 'entry',
-            corejs: 3,
-            targets: {
-                browsers: ['> 1%', 'last 2 versions', 'not ie <= 11']
-            }
-        }],
-        '@babel/preset-react'
-    ];
-
-    if (api.env('test')) {
-        plugins.push('@babel/plugin-transform-modules-commonjs');
-        presets[1][1].targets = { node: 'current' };
+    ],
+    env: {
+        test: {
+            plugins: ['@babel/plugin-transform-modules-commonjs'],
+            presets: [
+                ['@babel/preset-env', {
+                    targets: { node: 'current' }
+                }]
+            ]
+        }
     }
-
-    return { plugins, presets };
 };
 EOL
 
