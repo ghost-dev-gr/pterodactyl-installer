@@ -157,7 +157,7 @@ ptdl_dl() {
   chmod -R 755 storage bootstrap/cache
   chown -R www-data:www-data .
 
-  # Install Node.js 18.x (required for babel-loader@10)
+  # Install Node.js 18.x (required for modern dependencies)
   output "Installing Node.js 18.x..."
   
   # Clean previous installations
@@ -196,10 +196,17 @@ ptdl_dl() {
   # Fix styled-components macro imports
   find resources/scripts -type f \( -name "*.ts" -o -name "*.tsx" \) -exec sed -i "s/'styled-components\/macro'/'styled-components'/g" {} +
 
-  # Install compatible babel-loader version
-  yarn add -D babel-loader@8.3.0 @babel/core @babel/preset-env @babel/preset-react @babel/preset-typescript
+  # Install compatible babel packages
+  yarn add -D \
+    babel-loader@8.3.0 \
+    @babel/core@7.26.10 \
+    @babel/preset-env@7.26.9 \
+    @babel/preset-react@7.26.3 \
+    @babel/preset-typescript@7.27.0 \
+    @babel/plugin-proposal-nullish-coalescing-operator@7.18.6 \
+    @babel/plugin-proposal-optional-chaining@7.21.0
 
-  # Fix for @tanstack/virtual-core by adding Babel configuration
+  # Create babel configuration
   cat > babel.config.json <<EOL
 {
   "presets": [
@@ -214,9 +221,30 @@ ptdl_dl() {
 }
 EOL
 
+  # Update webpack configuration
+  if [ -f "webpack.config.js" ]; then
+    sed -i '/module:/a \
+      rules: [\
+        {\
+          test: /\.(js|jsx|ts|tsx)$/,\
+          exclude: /node_modules\/(?!@tanstack)/,\
+          use: {\
+            loader: "babel-loader",\
+            options: {\
+              presets: ["@babel/preset-env", "@babel/preset-react", "@babel/preset-typescript"],\
+              plugins: [\
+                "@babel/plugin-proposal-nullish-coalescing-operator",\
+                "@babel/plugin-proposal-optional-chaining"\
+              ]\
+            }\
+          }\
+        }\
+      ],' webpack.config.js
+  fi
+
   # Build assets
   output "Building panel assets..."
-  unset NODE_OPTIONS  # Remove --openssl-legacy-provider
+  export NODE_OPTIONS=--openssl-legacy-provider
   npx cross-env NODE_ENV=production webpack --mode production
 
   # Final setup
