@@ -1,4 +1,3 @@
-
 #!/bin/bash
 
 set -e
@@ -25,7 +24,7 @@ set -e
 # https://github.com/pterodactyl-installer/pterodactyl-installer/blob/master/LICENSE #
 #                                                                                    #
 # This script is not associated with the official Pterodactyl Project.               #
-# https://github.com/ghost-dev-gr/pterodactyl-installer                     #
+# https://github.com/pterodactyl-installer/pterodactyl-installer                     #
 #                                                                                    #
 ######################################################################################
 
@@ -158,33 +157,14 @@ ptdl_dl() {
   chmod -R 755 storage bootstrap/cache
   chown -R www-data:www-data .
 
-  # Install Node.js 18.x (required for modern dependencies)
-  output "Installing Node.js 18.x..."
-  
-  # Clean previous installations
-  sudo apt remove --purge nodejs npm -y 2>/dev/null
-  
-  # Install Node.js 18
-  curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
-  sudo apt-get install -y nodejs
-
-  # Verify installation
-  if ! node -v | grep -q 'v18'; then
-    error "Failed to install Node.js 18.x"
+  # Install required Yarn dependencies globally (without installing Node.js)
+  output "Installing required Yarn dependencies..."
+  if ! command -v yarn &>/dev/null; then
+    error "Yarn is not installed. Please install Yarn first."
     exit 1
   fi
-  success "Node.js $(node -v) installed"
 
-  # Install build tools
-  output "Installing build tools..."
-  sudo npm install -g yarn cross-env --force
-
-  # Clean and install dependencies
-  output "Cleaning and installing dependencies..."
-  rm -rf node_modules yarn.lock
-  yarn install --production --ignore-engines --network-timeout 300000
-
-  # Add required dependencies with exact versions
+  # Install specific versions of required packages
   yarn add \
     cross-env@7.0.3 \
     react-is@16.13.1 \
@@ -228,7 +208,7 @@ EOL
       rules: [\
         {\
           test: /\.(js|jsx|ts|tsx)$/,\
-          exclude: /node_modules\/(?!@tanstack)/,\
+          exclude: /node_modules\/(?!(@tanstack)\/).*/,\
           use: {\
             loader: "babel-loader",\
             options: {\
@@ -246,14 +226,14 @@ EOL
   # Build assets
   output "Building panel assets..."
   export NODE_OPTIONS=--openssl-legacy-provider
-  npx cross-env NODE_ENV=production webpack --mode production
+  yarn run build:production
 
   # Final setup
   cp .env.example .env
   chown -R www-data:www-data .
   chmod -R 755 storage bootstrap/cache
 
-  success "Pterodactyl Panel successfully installed with Node.js $(node -v)"
+  success "Pterodactyl Panel successfully installed!"
 }
 
 install_composer_deps() {
@@ -337,17 +317,37 @@ insert_cronjob() {
 install_pteroq() {
   output "Installing pteroq service.."
 
-  curl -o /etc/systemd/system/pteroq.service "$GITHUB_URL"/configs/pteroq.service
+  # Create the pteroq service file directly
+  cat > /etc/systemd/system/pteroq.service <<EOL
+[Unit]
+Description=Pterodactyl Queue Worker
+After=redis-server.service
+
+[Service]
+User=www-data
+Group=www-data
+Restart=always
+ExecStart=/usr/bin/php /var/www/pterodactyl/artisan queue:work --queue=high,standard,low --sleep=3 --tries=3
+StartLimitInterval=180
+StartLimitBurst=30
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
+EOL
 
   case "$OS" in
   debian | ubuntu)
-    sed -i -e "s@<user>@www-data@g" /etc/systemd/system/pteroq.service
+    sed -i -e "s@User=.*@User=www-data@g" /etc/systemd/system/pteroq.service
+    sed -i -e "s@Group=.*@Group=www-data@g" /etc/systemd/system/pteroq.service
     ;;
   rocky | almalinux)
-    sed -i -e "s@<user>@nginx@g" /etc/systemd/system/pteroq.service
+    sed -i -e "s@User=.*@User=nginx@g" /etc/systemd/system/pteroq.service
+    sed -i -e "s@Group=.*@Group=nginx@g" /etc/systemd/system/pteroq.service
     ;;
   esac
 
+  systemctl daemon-reload
   systemctl enable pteroq.service
   systemctl start pteroq
 
