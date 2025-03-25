@@ -208,7 +208,7 @@ EOL
       rules: [\
         {\
           test: /\.(js|jsx|ts|tsx)$/,\
-          exclude: /node_modules\/(@tanstack)/,\
+          exclude: /node_modules\/(?!@tanstack\/).*/,\
           use: {\
             loader: "babel-loader",\
             options: {\
