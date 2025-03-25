@@ -189,9 +189,9 @@ ptdl_dl() {
   yarn add \
     cross-env \
     react-is \
-    styled-components \
+    styled-components@5.2.1 \
     xterm-addon-search \
-    @types/styled-components \
+    @types/styled-components@^5.1.15 \
     redux \
     --dev --ignore-engines
 
