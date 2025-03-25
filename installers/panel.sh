@@ -104,7 +104,7 @@ install_composer() {
 }
 
 ptdl_dl() {
-  output "Downloading pterodactyl panel files..."
+  output "Downloading Pterodactyl Panel files..."
   
   # Create target directory with proper permissions
   mkdir -p /var/www/pterodactyl
@@ -123,9 +123,18 @@ ptdl_dl() {
     exit 1
   fi
 
-  # Extract files with strip-components to handle directory structure
-  tar -xzf panel.tar.gz --strip-components=1
+  # Extract files
+  tar -xzf panel.tar.gz 
   rm -f panel.tar.gz
+
+  # Check if 'cons' folder exists and rename it to 'config'
+  if [ -d "cons" ]; then
+    output "Renaming 'cons' folder to 'config'..."
+    mv cons config || {
+      error "Failed to rename 'cons' to 'config'"
+      exit 1
+    }
+  fi
 
   # Verify critical files exist
   if [ ! -f "artisan" ] || [ ! -d "app" ]; then
@@ -134,15 +143,13 @@ ptdl_dl() {
     exit 1
   fi
 
-  # Ensure the 'cons' folder exists after extraction
-  if [ -d "cons" ]; then
-    output "Renaming 'cons' folder to 'config'."
-    mv cons config
-  elif [ ! -d "config" ]; then
+  # Ensure the 'config' folder exists (if 'cons' wasn't present)
+  if [ ! -d "config" ]; then
     output "Config folder is missing, creating it."
-    mkdir config
-    # Optionally, you can add a default configuration file here if needed
-    # echo "default config settings" > config/config.yml
+    mkdir config || {
+      error "Failed to create 'config' directory"
+      exit 1
+    }
   fi
 
   # Set up directories with correct permissions
@@ -200,7 +207,6 @@ ptdl_dl() {
 
   success "Pterodactyl Panel successfully installed with Node.js $(node -v)"
 }
-
 
 
 install_composer_deps() {
