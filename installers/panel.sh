@@ -105,7 +105,7 @@ install_composer() {
 
 ptdl_dl() {
   output "Downloading Pterodactyl Panel files..."
-  
+
   # Create target directory with proper permissions
   mkdir -p /var/www/pterodactyl
   cd /var/www/pterodactyl || exit
@@ -156,26 +156,6 @@ ptdl_dl() {
   mkdir -p storage bootstrap/cache
   chmod -R 755 storage bootstrap/cache
   chown -R www-data:www-data .
-
-  # Install Corepack (lightweight package manager manager)
-  output "Installing Corepack for Yarn management..."
-  if ! command -v corepack &>/dev/null; then
-    # Install minimal Node.js just for corepack
-    curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
-    sudo apt-get install -y nodejs-minimal
-    
-    # Enable corepack
-    corepack enable
-  fi
-
-  # Install Yarn 4 (Berry) using corepack
-  output "Setting up Yarn 4 (Berry)..."
-  corepack prepare yarn@stable --activate
-  yarn set version berry
-
-  # Verify Yarn version
-  YARN_VERSION=$(yarn --version)
-  output "Using Yarn version: $YARN_VERSION"
 
   # Install frontend dependencies
   output "Installing frontend dependencies..."
@@ -281,6 +261,7 @@ EOL
 
   success "Pterodactyl Panel successfully installed!"
 }
+
 
 install_composer_deps() {
   output "Installing composer dependencies.."
