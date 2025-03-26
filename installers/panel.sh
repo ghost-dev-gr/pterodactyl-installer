@@ -157,28 +157,36 @@ ptdl_dl() {
   chmod -R 755 storage bootstrap/cache
   chown -R www-data:www-data .
 
-  # Install required Yarn dependencies globally (without installing Node.js)
-  output "Installing required Yarn dependencies..."
+  # Install and configure modern Yarn
+  output "Setting up Yarn package manager..."
   if ! command -v yarn &>/dev/null; then
-    error "Yarn is not installed. Please install Yarn first."
-    exit 1
+    output "Installing Yarn..."
+    curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
+    echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+    sudo apt-get update
+    sudo apt-get install --no-install-recommends yarn -y
   fi
 
-  # Install specific versions of required packages
+  # Verify Yarn version
+  YARN_VERSION=$(yarn --version)
+  output "Using Yarn version: $YARN_VERSION"
+
+  # Install frontend dependencies
+  output "Installing frontend dependencies..."
   yarn add \
     cross-env@7.0.3 \
     react-is@16.13.1 \
     styled-components@5.3.11 \
     xterm-addon-search@0.9.0 \
     @types/styled-components@5.1.26 \
-    redux@4.2.1 \
-    
+    redux@4.2.1
 
   # Fix styled-components macro imports
   find resources/scripts -type f \( -name "*.ts" -o -name "*.tsx" \) -exec sed -i "s/'styled-components\/macro'/'styled-components'/g" {} +
 
-  # Install compatible babel packages with core-js runtime
-  yarn add -D \
+  # Install build dependencies
+  output "Installing build dependencies..."
+  yarn add \
     babel-loader@8.3.0 \
     @babel/core@7.26.10 \
     @babel/runtime-corejs3@7.26.10 \
