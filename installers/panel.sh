@@ -159,9 +159,9 @@ ptdl_dl() {
 
   output "Installing going inside  pteroq directory.."
   cd /var/www/pterodactyl && \
-    curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - && \
+    curl -sL https://deb.nodesource.com/setup_18.x | sudo -E bash - && \
     sudo apt-get install -y nodejs && \
-  output "Installed node 16 and yarn?"
+  output "Installed node 18 and yarn?"
   # Final setup
   cp .env.example .env
   chown -R www-data:www-data .
