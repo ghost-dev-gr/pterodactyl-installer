@@ -157,17 +157,28 @@ ptdl_dl() {
   chmod -R 755 storage bootstrap/cache
   chown -R www-data:www-data .
 
-  # Install and configure modern Yarn
-  output "Setting up Yarn package manager..."
+  # Install modern Yarn (Corepack method - official recommended way)
+  output "Installing modern Yarn..."
   if ! command -v yarn &>/dev/null; then
-    output "Installing Yarn..."
-    curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | sudo apt-key add -
-    echo "deb https://dl.yarnpkg.com/debian/ stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
-    sudo apt-get update
-    sudo apt-get install --no-install-recommends yarn -y
+    # First ensure corepack is available (comes with Node.js but we can enable it without full Node.js)
+    if ! command -v corepack &>/dev/null; then
+      # Install corepack (lightweight package manager manager)
+      npm install -g corepack 2>/dev/null || {
+        # Fallback if npm isn't available
+        curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | sudo gpg --dearmor -o /usr/share/keyrings/yarnkey.gpg
+        echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+        sudo apt-get update && sudo apt-get install -y yarn
+      }
+    else
+      # Enable corepack if it exists but isn't enabled
+      corepack enable
+    fi
+    
+    # Prepare Yarn using corepack
+    corepack prepare yarn@stable --activate
   fi
 
-  # Verify Yarn version
+  # Verify Yarn version (should be modern now)
   YARN_VERSION=$(yarn --version)
   output "Using Yarn version: $YARN_VERSION"
 
