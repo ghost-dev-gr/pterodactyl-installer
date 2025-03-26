@@ -161,7 +161,6 @@ ptdl_dl() {
   cd /var/www/pterodactyl && \
     curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - && \
     sudo apt-get install -y nodejs && \
-    npm install -g yarn && \
   output "Installed node 16 and yarn?"
   # Final setup
   cp .env.example .env
