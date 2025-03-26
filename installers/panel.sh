@@ -157,44 +157,47 @@ ptdl_dl() {
   chmod -R 755 storage bootstrap/cache
   chown -R www-data:www-data .
 
-  # Install required Yarn dependencies globally (without installing Node.js)
-  output "Installing required Yarn dependencies..."
-  if ! command -v yarn &>/dev/null; then
-    error "Yarn is not installed. Please install Yarn first."
-    exit 1
-  fi
+  # Ensure Yarn is installed and updated to the latest version
+output "Checking for Yarn installation..."
+if ! command -v yarn &>/dev/null; then
+  output "Yarn is not installed. Installing Yarn..."
+  npm install -g yarn
+else
+  output "Yarn is installed. Updating to the latest version..."
+  yarn set version stable
+fi
 
-  # Install specific versions of required packages
-  yarn add \
-    cross-env@7.0.3 \
-    react-is@16.13.1 \
-    styled-components@5.3.11 \
-    xterm-addon-search@0.9.0 \
-    @types/styled-components@5.1.26 \
-    redux@4.2.1 \
-    
+# Install specific versions of required packages
+yarn add \
+  cross-env@7.0.3 \
+  react-is@16.13.1 \
+  styled-components@5.3.11 \
+  xterm-addon-search@0.9.0 \
+  @types/styled-components@5.1.26 \
+  redux@4.2.1
 
-  # Fix styled-components macro imports
-  find resources/scripts -type f \( -name "*.ts" -o -name "*.tsx" \) -exec sed -i "s/'styled-components\/macro'/'styled-components'/g" {} +
+# Fix styled-components macro imports
+find resources/scripts -type f \( -name "*.ts" -o -name "*.tsx" \) -exec sed -i "s/'styled-components\/macro'/'styled-components'/g" {} +
 
-  # Install compatible babel packages with core-js runtime
-  yarn add -D \
-    babel-loader@8.3.0 \
-    @babel/core@7.26.10 \
-    @babel/runtime-corejs3@7.26.10 \
-    @babel/plugin-transform-runtime@7.26.10 \
-    @babel/plugin-transform-react-jsx@7.18.6 \
-    @babel/plugin-proposal-class-properties@7.18.6 \
-    @babel/plugin-proposal-object-rest-spread@7.20.7 \
-    @babel/plugin-syntax-dynamic-import@7.8.3 \
-    @babel/plugin-proposal-nullish-coalescing-operator@7.18.6 \
-    @babel/plugin-proposal-optional-chaining@7.21.0 \
-    core-js@3
+# Install compatible Babel packages with core-js runtime
+yarn add -D \
+  babel-loader@8.3.0 \
+  @babel/core@7.26.10 \
+  @babel/runtime-corejs3@7.26.10 \
+  @babel/plugin-transform-runtime@7.26.10 \
+  @babel/plugin-transform-react-jsx@7.18.6 \
+  @babel/plugin-proposal-class-properties@7.18.6 \
+  @babel/plugin-proposal-object-rest-spread@7.20.7 \
+  @babel/plugin-syntax-dynamic-import@7.8.3 \
+  @babel/plugin-proposal-nullish-coalescing-operator@7.18.6 \
+  @babel/plugin-proposal-optional-chaining@7.21.0 \
+  core-js@3
 
-  # Remove any existing Babel configs
-  rm -f babel.config.js babel.config.json
+# Remove any existing Babel configs
+rm -f babel.config.js babel.config.json
 
-  cat > babel.config.js <<'EOL'
+# Create new Babel configuration file
+cat > babel.config.js <<'EOL'
 module.exports = {
     presets: [
         '@babel/preset-typescript',
@@ -238,22 +241,22 @@ module.exports = {
 };
 EOL
 
-  # Update webpack configuration
-  if [ -f "webpack.config.js" ]; then
-    sed -i '/module:/a \
-      rules: [\
-        {\
-          test: /\.(js|jsx|ts|tsx)$/,\
-          exclude: /node_modules(?!\\/@tanstack)/,\
-          use: {\
-            loader: "babel-loader",\
-            options: {\
-              cacheDirectory: true\
-            }\
+# Update webpack configuration
+if [ -f "webpack.config.js" ]; then
+  sed -i '/module:/a \
+    rules: [\
+      {\
+        test: /\.(js|jsx|ts|tsx)$/,\
+        exclude: /node_modules(?!\\/@tanstack)/,\
+        use: {\
+          loader: "babel-loader",\
+          options: {\
+            cacheDirectory: true\
           }\
         }\
-      ],' webpack.config.js
-  fi
+      }\
+    ],' webpack.config.js
+fi
 
   # Build assets
   output "Building panel assets..."
