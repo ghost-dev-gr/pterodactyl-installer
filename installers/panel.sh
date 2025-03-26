@@ -168,6 +168,14 @@ ptdl_dl() {
   chmod -R 755 storage bootstrap/cache
 
   success "Pterodactyl Panel successfully installed!"
+  output "Trying php cache and more"
+  php artisan migrate && \
+    php artisan view:clear && \
+    php artisan cache:clear && \
+    php artisan route:clear && \
+    chmod -R 755 storage/* bootstrap/cache/ && \
+    chown -R www-data:www-data *
+    success "Php okay"
 }
 
 
