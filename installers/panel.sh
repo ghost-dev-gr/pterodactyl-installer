@@ -157,7 +157,12 @@ ptdl_dl() {
   chmod -R 755 storage bootstrap/cache
   chown -R www-data:www-data .
 
- 
+  output "Installing going inside  pteroq directory.."
+  cd /var/www/pterodactyl && \
+    curl -sL https://deb.nodesource.com/setup_16.x | sudo -E bash - && \
+    sudo apt-get install -y nodejs && \
+    npm install -g yarn && \
+  output "Installed node 16 and yarn?"
   # Final setup
   cp .env.example .env
   chown -R www-data:www-data .
