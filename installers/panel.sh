@@ -157,16 +157,17 @@ ptdl_dl() {
   chmod -R 755 storage bootstrap/cache
   chown -R www-data:www-data .
 
-  # Ensure Yarn is installed and updated to the latest version
-output "Checking for Yarn installation..."
-if ! command -v yarn &>/dev/null; then
-  output "Yarn is not installed. Installing Yarn..."
-  apt update && apt install -y yarn
-else
-  output "Yarn is installed. Updating to the latest version..."
-  yarn set version stable
-fi
-
+ # Ensure Yarn is installed and updated to the latest version
+  output "Checking for Yarn installation..."
+  if ! command -v yarn &>/dev/null; then
+    output "Yarn is not installed. Installing Yarn..."
+    # Uninstall older versions of Yarn first
+    apt-get remove --purge yarn -y
+    apt update && apt install -y yarn
+  else
+    output "Yarn is installed. Updating to the latest version..."
+    yarn set version stable
+  fi
 # Install specific versions of required packages
 yarn add \
   cross-env@7.0.3 \
