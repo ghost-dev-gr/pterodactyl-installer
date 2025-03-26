@@ -172,7 +172,7 @@ ptdl_dl() {
     xterm-addon-search@0.9.0 \
     @types/styled-components@5.1.26 \
     redux@4.2.1 \
-    --ignore-engines --exact
+    
 
   # Fix styled-components macro imports
   find resources/scripts -type f \( -name "*.ts" -o -name "*.tsx" \) -exec sed -i "s/'styled-components\/macro'/'styled-components'/g" {} +
