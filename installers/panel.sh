@@ -165,7 +165,7 @@ ptdl_dl() {
   fi
 
   # Install specific versions of required packages
-  yarn add \
+  sudo yarn add \
     cross-env@7.0.3 \
     react-is@16.13.1 \
     styled-components@5.3.11 \
@@ -178,7 +178,7 @@ ptdl_dl() {
   find resources/scripts -type f \( -name "*.ts" -o -name "*.tsx" \) -exec sed -i "s/'styled-components\/macro'/'styled-components'/g" {} +
 
   # Install compatible babel packages with core-js runtime
-  yarn add -D \
+  sudo yarn add -D \
     babel-loader@8.3.0 \
     @babel/core@7.26.10 \
     @babel/runtime-corejs3@7.26.10 \
