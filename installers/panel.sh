@@ -161,7 +161,7 @@ ptdl_dl() {
 output "Checking for Yarn installation..."
 if ! command -v yarn &>/dev/null; then
   output "Yarn is not installed. Installing Yarn..."
-  npm install -g yarn
+  apt update && apt install -y yarn
 else
   output "Yarn is installed. Updating to the latest version..."
   yarn set version stable
