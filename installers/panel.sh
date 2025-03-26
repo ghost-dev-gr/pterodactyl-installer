@@ -198,7 +198,7 @@ configure() {
     --cache="redis" \
     --session="redis" \
     --queue="redis" \
-    --redis-host="localhost" \
+    --redis-host="127.0.0.1" \
     --redis-pass="null" \
     --redis-port="6379" \
     --settings-ui=true
