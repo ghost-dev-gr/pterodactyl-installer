@@ -157,47 +157,28 @@ ptdl_dl() {
   chmod -R 755 storage bootstrap/cache
   chown -R www-data:www-data .
 
-  # Install modern Yarn (Corepack method - official recommended way)
-  output "Installing modern Yarn..."
+  # Install required Yarn dependencies globally (without installing Node.js)
+  output "Installing required Yarn dependencies..."
   if ! command -v yarn &>/dev/null; then
-    # First ensure corepack is available (comes with Node.js but we can enable it without full Node.js)
-    if ! command -v corepack &>/dev/null; then
-      # Install corepack (lightweight package manager manager)
-      npm install -g corepack 2>/dev/null || {
-        # Fallback if npm isn't available
-        curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | sudo gpg --dearmor -o /usr/share/keyrings/yarnkey.gpg
-        echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
-        sudo apt-get update && sudo apt-get install -y yarn
-      }
-    else
-      # Enable corepack if it exists but isn't enabled
-      corepack enable
-    fi
-    
-    # Prepare Yarn using corepack
-    corepack prepare yarn@stable --activate
+    error "Yarn is not installed. Please install Yarn first."
+    exit 1
   fi
 
-  # Verify Yarn version (should be modern now)
-  YARN_VERSION=$(yarn --version)
-  output "Using Yarn version: $YARN_VERSION"
-
-  # Install frontend dependencies
-  output "Installing frontend dependencies..."
+  # Install specific versions of required packages
   yarn add \
     cross-env@7.0.3 \
     react-is@16.13.1 \
     styled-components@5.3.11 \
     xterm-addon-search@0.9.0 \
     @types/styled-components@5.1.26 \
-    redux@4.2.1
+    redux@4.2.1 \
+    
 
   # Fix styled-components macro imports
   find resources/scripts -type f \( -name "*.ts" -o -name "*.tsx" \) -exec sed -i "s/'styled-components\/macro'/'styled-components'/g" {} +
 
-  # Install build dependencies
-  output "Installing build dependencies..."
-  yarn add \
+  # Install compatible babel packages with core-js runtime
+  yarn add -D \
     babel-loader@8.3.0 \
     @babel/core@7.26.10 \
     @babel/runtime-corejs3@7.26.10 \
