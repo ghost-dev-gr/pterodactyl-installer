@@ -157,19 +157,23 @@ ptdl_dl() {
   chmod -R 755 storage bootstrap/cache
   chown -R www-data:www-data .
 
- # Ensure Yarn is installed and updated to the latest version
-  output "Checking for Yarn installation..."
-  if ! command -v yarn &>/dev/null; then
-    output "Yarn is not installed. Installing Yarn..."
-    # Uninstall older versions of Yarn first
-    apt-get remove --purge yarn -y
-    apt update && apt install -y yarn
-  else
-    output "Yarn is installed. Updating to the latest version..."
-    yarn set version stable
-  fi
-# Install specific versions of required packages
-yarn add \
+output "Checking for Yarn installation..."
+if ! command -v yarn &>/dev/null; then
+  output "Yarn is not installed. Installing Yarn 4..."
+  # Uninstall older versions of Yarn first
+  apt-get remove --purge yarn -y
+  apt update && apt install -y curl
+  curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | tee /etc/apt/trusted.gpg.d/yarn.asc
+  echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
+  apt update && apt install -y yarn
+  yarn set version berry --verbose  # Install Yarn 4 (Berry)
+else
+  output "Yarn is installed. Updating to Yarn 4 (Berry)..."
+  yarn set version berry --verbose  # Update to Yarn 4 (Berry)
+fi
+
+# Install specific versions of required packages with verbose output
+yarn add --verbose \
   cross-env@7.0.3 \
   react-is@16.13.1 \
   styled-components@5.3.11 \
@@ -177,11 +181,11 @@ yarn add \
   @types/styled-components@5.1.26 \
   redux@4.2.1
 
-# Fix styled-components macro imports
-find resources/scripts -type f \( -name "*.ts" -o -name "*.tsx" \) -exec sed -i "s/'styled-components\/macro'/'styled-components'/g" {} +
+# Fix styled-components macro imports with verbose logging
+find resources/scripts -type f \( -name "*.ts" -o -name "*.tsx" \) -exec sed -i "s/'styled-components\/macro'/'styled-components'/g" {} + --verbose
 
-# Install compatible Babel packages with core-js runtime
-yarn add -D \
+# Install compatible Babel packages with core-js runtime, verbose flag added
+yarn add -D --verbose \
   babel-loader@8.3.0 \
   @babel/core@7.26.10 \
   @babel/runtime-corejs3@7.26.10 \
