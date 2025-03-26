@@ -157,52 +157,58 @@ ptdl_dl() {
   chmod -R 755 storage bootstrap/cache
   chown -R www-data:www-data .
 
-output "Checking for Yarn installation..."
-if ! command -v yarn &>/dev/null; then
-  output "Yarn is not installed. Installing Yarn 4..."
-  # Uninstall older versions of Yarn first
-  apt-get remove --purge yarn -y
-  apt update && apt install -y curl
-  curl -sS https://dl.yarnpkg.com/debian/pubkey.gpg | tee /etc/apt/trusted.gpg.d/yarn.asc
-  echo "deb https://dl.yarnpkg.com/debian/ stable main" | tee /etc/apt/sources.list.d/yarn.list
-  apt update && apt install -y yarn
-  yarn set version berry --verbose  # Install Yarn 4 (Berry)
-else
-  output "Yarn is installed. Updating to Yarn 4 (Berry)..."
-  yarn set version berry --verbose  # Update to Yarn 4 (Berry)
-fi
+  # Install Corepack (lightweight package manager manager)
+  output "Installing Corepack for Yarn management..."
+  if ! command -v corepack &>/dev/null; then
+    # Install minimal Node.js just for corepack
+    curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+    sudo apt-get install -y nodejs-minimal
+    
+    # Enable corepack
+    corepack enable
+  fi
 
-# Install specific versions of required packages with verbose output
-yarn add --verbose \
-  cross-env@7.0.3 \
-  react-is@16.13.1 \
-  styled-components@5.3.11 \
-  xterm-addon-search@0.9.0 \
-  @types/styled-components@5.1.26 \
-  redux@4.2.1
+  # Install Yarn 4 (Berry) using corepack
+  output "Setting up Yarn 4 (Berry)..."
+  corepack prepare yarn@stable --activate
+  yarn set version berry
 
-# Fix styled-components macro imports with verbose logging
-find resources/scripts -type f \( -name "*.ts" -o -name "*.tsx" \) -exec sed -i "s/'styled-components\/macro'/'styled-components'/g" {} + --verbose
+  # Verify Yarn version
+  YARN_VERSION=$(yarn --version)
+  output "Using Yarn version: $YARN_VERSION"
 
-# Install compatible Babel packages with core-js runtime, verbose flag added
-yarn add -D --verbose \
-  babel-loader@8.3.0 \
-  @babel/core@7.26.10 \
-  @babel/runtime-corejs3@7.26.10 \
-  @babel/plugin-transform-runtime@7.26.10 \
-  @babel/plugin-transform-react-jsx@7.18.6 \
-  @babel/plugin-proposal-class-properties@7.18.6 \
-  @babel/plugin-proposal-object-rest-spread@7.20.7 \
-  @babel/plugin-syntax-dynamic-import@7.8.3 \
-  @babel/plugin-proposal-nullish-coalescing-operator@7.18.6 \
-  @babel/plugin-proposal-optional-chaining@7.21.0 \
-  core-js@3
+  # Install frontend dependencies
+  output "Installing frontend dependencies..."
+  yarn add \
+    cross-env@7.0.3 \
+    react-is@16.13.1 \
+    styled-components@5.3.11 \
+    xterm-addon-search@0.9.0 \
+    @types/styled-components@5.1.26 \
+    redux@4.2.1
 
-# Remove any existing Babel configs
-rm -f babel.config.js babel.config.json
+  # Fix styled-components macro imports
+  find resources/scripts -type f \( -name "*.ts" -o -name "*.tsx" \) -exec sed -i "s/'styled-components\/macro'/'styled-components'/g" {} +
 
-# Create new Babel configuration file
-cat > babel.config.js <<'EOL'
+  # Install build dependencies
+  output "Installing build dependencies..."
+  yarn add \
+    babel-loader@8.3.0 \
+    @babel/core@7.26.10 \
+    @babel/runtime-corejs3@7.26.10 \
+    @babel/plugin-transform-runtime@7.26.10 \
+    @babel/plugin-transform-react-jsx@7.18.6 \
+    @babel/plugin-proposal-class-properties@7.18.6 \
+    @babel/plugin-proposal-object-rest-spread@7.20.7 \
+    @babel/plugin-syntax-dynamic-import@7.8.3 \
+    @babel/plugin-proposal-nullish-coalescing-operator@7.18.6 \
+    @babel/plugin-proposal-optional-chaining@7.21.0 \
+    core-js@3
+
+  # Remove any existing Babel configs
+  rm -f babel.config.js babel.config.json
+
+  cat > babel.config.js <<'EOL'
 module.exports = {
     presets: [
         '@babel/preset-typescript',
@@ -246,22 +252,22 @@ module.exports = {
 };
 EOL
 
-# Update webpack configuration
-if [ -f "webpack.config.js" ]; then
-  sed -i '/module:/a \
-    rules: [\
-      {\
-        test: /\.(js|jsx|ts|tsx)$/,\
-        exclude: /node_modules(?!\\/@tanstack)/,\
-        use: {\
-          loader: "babel-loader",\
-          options: {\
-            cacheDirectory: true\
+  # Update webpack configuration
+  if [ -f "webpack.config.js" ]; then
+    sed -i '/module:/a \
+      rules: [\
+        {\
+          test: /\.(js|jsx|ts|tsx)$/,\
+          exclude: /node_modules(?!\\/@tanstack)/,\
+          use: {\
+            loader: "babel-loader",\
+            options: {\
+              cacheDirectory: true\
+            }\
           }\
         }\
-      }\
-    ],' webpack.config.js
-fi
+      ],' webpack.config.js
+  fi
 
   # Build assets
   output "Building panel assets..."
