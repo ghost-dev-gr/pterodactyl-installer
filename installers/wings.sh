@@ -303,15 +303,36 @@ configure_mysql() {
 perform_install() {
   output "Installing pterodactyl wings.."
   dep_install
+   # Add proxy routes file before installing Go
+  if [ -f "router_server_proxy.go" ]; then
+    output "Adding custom proxy routes..."
+    mkdir -p /usr/local/bin/wings/router
+    cp router_server_proxy.go /usr/local/bin/wings/router/
+    success "Custom proxy routes added"
+  fi
+  
   install_golang
   ptdl_dl
   systemd_file
+  
   [ "$CONFIGURE_DBHOST" == true ] && configure_mysql
   [ "$CONFIGURE_LETSENCRYPT" == true ] && letsencrypt
 
  # Create server_certs directory
   mkdir -p /srv/server_certs
   chmod 700 /srv/server_certs
+   # Add proxy endpoints to router.go
+  output "Adding proxy endpoints to router..."
+  ROUTER_FILE="/usr/local/bin/wings/router/router.go"
+  if [ -f "$ROUTER_FILE" ]; then
+    sed -i '/server.POST("\/ws\/deny", postServerDenyWSTokens)/a \
+        server.POST("\/proxy\/create", postServerProxyCreate)\
+        server.POST("\/proxy\/delete", postServerProxyDelete)' "$ROUTER_FILE"
+    success "Proxy endpoints added to router"
+  else
+    warning "Router file not found at $ROUTER_FILE - proxy endpoints not added"
+  fi
+  
   return 0
 }
 
