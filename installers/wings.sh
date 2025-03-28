@@ -303,49 +303,15 @@ configure_mysql() {
 perform_install() {
   output "Installing pterodactyl wings.."
   dep_install
-  
-  # Add proxy routes file before installing Go
-  output "Adding custom proxy routes..."
-  if [ -f "router_server_proxy.go" ]; then
-    mkdir -p /usr/local/bin/wings/router
-    cp router_server_proxy.go /usr/local/bin/wings/router/
-    success "Custom proxy routes added"
-  else
-    warning "router_server_proxy.go not found in current directory"
-  fi
-  
   install_golang
   ptdl_dl
   systemd_file
   [ "$CONFIGURE_DBHOST" == true ] && configure_mysql
   [ "$CONFIGURE_LETSENCRYPT" == true ] && letsencrypt
 
-  # Create server_certs directory
+ # Create server_certs directory
   mkdir -p /srv/server_certs
   chmod 700 /srv/server_certs
-  
-  # Modify router.go to add proxy endpoints
-  output "Adding proxy endpoints to router.go..."
-  if [ -f "/usr/local/bin/wings/router/router.go" ]; then
-    sed -i '/server.POST("\/ws\/deny", postServerDenyWSTokens)/a \
-        server.POST("\/proxy\/create", postServerProxyCreate)\
-        server.POST("\/proxy\/delete", postServerProxyDelete)' /usr/local/bin/wings/router/router.go
-    success "Proxy endpoints added to router.go"
-  else
-    warning "router.go not found in expected location"
-  fi
-  
-  # Rebuild wings with lego support
-  output "Rebuilding wings with lego support..."
-  systemctl stop wings || true
-  cd /usr/local/bin/wings
-  go get github.com/go-acme/lego/v4
-  go mod tidy
-  go build -o /usr/local/bin/wings
-  chmod +x /usr/local/bin/wings
-  systemctl start wings
-  success "Wings rebuilt with lego support"
-  
   return 0
 }
 
