@@ -304,11 +304,11 @@ perform_install() {
   output "Installing pterodactyl wings.."
   dep_install
   
-  
   install_golang
   ptdl_dl
   systemd_file
-   # Add proxy routes file before installing Go
+
+  # Add proxy routes file before installing Go
   if [ -f "router_server_proxy.go" ]; then
     output "Adding custom proxy routes..."
     mkdir -p /usr/local/bin/wings/router
@@ -319,49 +319,55 @@ perform_install() {
   [ "$CONFIGURE_DBHOST" == true ] && configure_mysql
   [ "$CONFIGURE_LETSENCRYPT" == true ] && letsencrypt
 
- # Create server_certs directory
+  # Create server_certs directory
   mkdir -p /srv/server_certs
   chmod 700 /srv/server_certs
   
-output "Downloading srv wings"
-mkdir -p "$WINGSDIR" || { error "Failed to create $WINGSDIR"; return 1; }
-cd "$WINGSDIR" || { error "Failed to navigate to $WINGSDIR"; return 1; }
+  output "Downloading srv wings"
 
-LOCATION=$(curl -s https://api.github.com/repos/pterodactyl/wings/releases/latest \
-  | grep "tag_name" \
-  | awk -F '"' '{print "https://github.com/pterodactyl/wings/archive/" $4 ".zip"}')
+  # Set the installation directory
+  INSTALL_DIR="/srv/wings"
+  
+  # Ensure the directory exists
+  mkdir -p "$INSTALL_DIR" || { error "Failed to create $INSTALL_DIR"; return 1; }
+  cd "$INSTALL_DIR" || { error "Failed to navigate to $INSTALL_DIR"; return 1; }
 
-if [ -z "$LOCATION" ]; then
-  error "Failed to fetch the latest Wings release URL."
-  return 1
-fi
+  LOCATION=$(curl -s https://api.github.com/repos/pterodactyl/wings/releases/latest \
+    | grep "tag_name" \
+    | awk -F '"' '{print "https://github.com/pterodactyl/wings/archive/" $4 ".zip"}')
 
-curl -L -o wings_latest.zip "$LOCATION" || { error "Failed to download Wings"; return 1; }
-unzip -o wings_latest.zip || { error "Failed to unzip Wings"; return 1; }
+  if [ -z "$LOCATION" ]; then
+    error "Failed to fetch the latest Wings release URL."
+    return 1
+  fi
 
-# Add proxy endpoints to router.go
-output "Adding proxy endpoints to router..."
-ROUTER_FILE="/srv/wings/router/router.go"
-if [ -f "$ROUTER_FILE" ]; then
-  sed -i '/server.POST("\/ws\/deny", postServerDenyWSTokens)/a \
-      server.POST("\/proxy\/create", postServerProxyCreate)\
-      server.POST("\/proxy\/delete", postServerProxyDelete)' "$ROUTER_FILE"
-  success "Proxy endpoints added to router"
-else
-  warning "Router file not found at $ROUTER_FILE - proxy endpoints not added"
-fi
+  curl -L -o wings_latest.zip "$LOCATION" || { error "Failed to download Wings"; return 1; }
+  unzip -o wings_latest.zip || { error "Failed to unzip Wings"; return 1; }
 
-# Stop, rebuild, and restart Wings
-systemctl stop wings || warning "Failed to stop Wings, continuing..."
-go get github.com/go-acme/lego/v4 || { error "Go get failed"; return 1; }
-go mod tidy || { error "Go mod tidy failed"; return 1; }
-go build -o /usr/local/bin/wings || { error "Go build failed"; return 1; }
-chmod +x /usr/local/bin/wings || { error "Failed to set executable permissions"; return 1; }
-systemctl start wings || { error "Failed to start Wings"; return 1; }
+  # Add proxy endpoints to router.go
+  output "Adding proxy endpoints to router..."
+  ROUTER_FILE="/srv/wings/router/router.go"
+  if [ -f "$ROUTER_FILE" ]; then
+    sed -i '/server.POST("\/ws\/deny", postServerDenyWSTokens)/a \
+        server.POST("\/proxy\/create", postServerProxyCreate)\
+        server.POST("\/proxy\/delete", postServerProxyDelete)' "$ROUTER_FILE"
+    success "Proxy endpoints added to router"
+  else
+    warning "Router file not found at $ROUTER_FILE - proxy endpoints not added"
+  fi
 
-success "Wings installation and update completed successfully!"
-return 0
+  # Stop, rebuild, and restart Wings
+  systemctl stop wings || warning "Failed to stop Wings, continuing..."
+  go get github.com/go-acme/lego/v4 || { error "Go get failed"; return 1; }
+  go mod tidy || { error "Go mod tidy failed"; return 1; }
+  go build -o /usr/local/bin/wings || { error "Go build failed"; return 1; }
+  chmod +x /usr/local/bin/wings || { error "Failed to set executable permissions"; return 1; }
+  systemctl start wings || { error "Failed to start Wings"; return 1; }
+
+  success "Wings installation and update completed successfully!"
+  return 0
 }
+
 # ---------------- Installation ---------------- #
 
 perform_install
