@@ -330,7 +330,7 @@ ptdl_dl() {
 
   success "Pterodactyl Wings downloaded and installed successfully"
 }
-install_golang() {`
+install_golang() {
   output "Installing Go 1.22.1..."
   wget https://go.dev/dl/go1.22.1.linux-amd64.tar.gz -O /tmp/go.tar.gz
   rm -rf /usr/local/go
