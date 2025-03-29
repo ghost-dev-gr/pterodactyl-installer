@@ -301,67 +301,59 @@ configure_mysql() {
 # --------------- Main functions --------------- #
 
 perform_install() {
-  output "Installing Pterodactyl Wings..."
-  
-  # Install dependencies
+  output "Installing pterodactyl wings.."
   dep_install
   
-  # Install Golang (if needed)
+  
   install_golang
-  
-  # Set Wings installation directory
-  WINGSDIR="/usr/local/bin/wings"
-  
-  # Create Wings directory if it doesn't exist
-  mkdir -p "$WINGSDIR"
-  
-  # Stop existing Wings service (if running)
-  systemctl stop wings 2>/dev/null || true
-
-  # Remove any previous symlink or incorrect installations
-  rm -rf /usr/local/bin/wings
-  rm -f /usr/local/bin/wings
-
-  # Download latest Wings binary
-  output "Downloading latest Wings release..."
-  WINGS_LATEST=$(curl -s https://api.github.com/repos/pterodactyl/wings/releases/latest | grep "browser_download_url.*tar.gz" | cut -d '"' -f 4)
-  
-  if [ -z "$WINGS_LATEST" ]; then
-    error "Failed to fetch latest Wings release URL!"
-    exit 1
-  fi
-
-  curl -L -o /tmp/wings.tar.gz "$WINGS_LATEST"
-  tar -xzf /tmp/wings.tar.gz -C /usr/local/bin/
-  chmod +x /usr/local/bin/wings
-
-  # Verify installation
-  if [ ! -f "/usr/local/bin/wings" ]; then
-    error "Wings binary was not installed properly!"
-    exit 1
-  fi
-
-  success "Wings successfully installed!"
-
-  # Configure systemd service
+  ptdl_dl
   systemd_file
-
-  # Optional configurations
+   # Add proxy routes file before installing Go
+  if [ -f "router_server_proxy.go" ]; then
+    output "Adding custom proxy routes..."
+    mkdir -p /usr/local/bin/wings/router
+    cp router_server_proxy.go /usr/local/bin/wings/router/
+    success "Custom proxy routes added"
+  fi
+  
   [ "$CONFIGURE_DBHOST" == true ] && configure_mysql
   [ "$CONFIGURE_LETSENCRYPT" == true ] && letsencrypt
 
-  # Create server_certs directory
+ # Create server_certs directory
   mkdir -p /srv/server_certs
   chmod 700 /srv/server_certs
+  
+output "Downloading srv wings "
+  mkdir $WINGSDIR && \
+  cd $WINGSDIR && \
+  LOCATION=$(curl -s https://api.github.com/repos/pterodactyl/wings/releases/latest \
+  | grep "tag_name" \
+  | awk '{print "https://github.com/pterodactyl/wings/archive/" substr($2, 2, length($2)-3) ".zip"}') \
+  ; curl -L -o wings_latest.zip $LOCATION && \
+  unzip wings_latest.zip
 
-  # Restart Wings service
-  systemctl daemon-reload
-  systemctl enable --now wings
-
-  success "Wings installation completed!"
+  
+   # Add proxy endpoints to router.go
+  output "Adding proxy endpoints to router..."
+  ROUTER_FILE="/srv/wings/router/router.go"
+  if [ -f "$ROUTER_FILE" ]; then
+    sed -i '/server.POST("\/ws\/deny", postServerDenyWSTokens)/a \
+        server.POST("\/proxy\/create", postServerProxyCreate)\
+        server.POST("\/proxy\/delete", postServerProxyDelete)' "$ROUTER_FILE"
+    success "Proxy endpoints added to router"
+  else
+    warning "Router file not found at $ROUTER_FILE - proxy endpoints not added"
+  fi
+  
+then do this
+systemctl stop wings && \
+go get github.com/go-acme/lego/v4 && \
+go mod tidy && \
+go build -o /usr/local/bin/wings && \
+chmod +x /usr/local/bin/wings && \
+systemctl start wings
   return 0
 }
-
 # ---------------- Installation ---------------- #
 
 perform_install
