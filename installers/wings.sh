@@ -303,6 +303,11 @@ configure_mysql() {
 perform_install() {
   output "Installing pterodactyl wings.."
   dep_install
+  
+  
+  install_golang
+  ptdl_dl
+  systemd_file
    # Add proxy routes file before installing Go
   if [ -f "router_server_proxy.go" ]; then
     output "Adding custom proxy routes..."
@@ -310,10 +315,6 @@ perform_install() {
     cp router_server_proxy.go /usr/local/bin/wings/router/
     success "Custom proxy routes added"
   fi
-  
-  install_golang
-  ptdl_dl
-  systemd_file
   
   [ "$CONFIGURE_DBHOST" == true ] && configure_mysql
   [ "$CONFIGURE_LETSENCRYPT" == true ] && letsencrypt
