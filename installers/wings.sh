@@ -322,12 +322,12 @@ ptdl_dl() {
 
   # Clean up temp directory
   cd /tmp && rm -rf "$TEMP_WINGSDIR"
-  chmod u+x /usr/local/bin/wings
+ 
   # Download the binary for Wings
   mkdir -p /etc/pterodactyl
   curl -L -o /usr/local/bin/wings/wings "$WINGS_DL_BASE_URL$ARCH"
   chmod u+x /usr/local/bin/wings
-
+  chmod +x /usr/local/bin/wings/wings
   success "Pterodactyl Wings downloaded and installed successfully"
 }
 install_golang() {
