@@ -208,17 +208,129 @@ dep_install() {
 }
 
 ptdl_dl() {
-  echo "* Downloading Pterodactyl Wings.. "
+  output "Downloading custom wings files..."
+  
+  # Create temporary working directory
+  TEMP_WINGSDIR="$(mktemp -d)"
+  cd "$TEMP_WINGSDIR" || exit
 
+  rm -rf wings wings-* wings.zip wings.tar.gz 2>/dev/null
+
+  # Define URLs
+  ZIP_URL="https://github.com/ghost-dev-gr/wings/releases/latest/download/wings.zip"
+  TAR_URL="https://github.com/ghost-dev-gr/wings/releases/latest/download/wings.tar.gz"
+  GIT_URL="https://github.com/ghost-dev-gr/wings.git"
+
+  # Function to validate downloaded file
+  validate_file() {
+    local file=$1
+    echo "Validating $file..."
+    
+    if [ ! -s "$file" ]; then
+      echo "Error: File is empty or doesn't exist"
+      return 1
+    fi
+
+    file_type=$(file -b "$file")
+    echo "File type: $file_type"
+
+    if [[ "$file_type" == *"Zip archive"* ]] || 
+       [[ "$file_type" == *"gzip compressed"* ]] || 
+       [[ "$file_type" == *"tar archive"* ]]; then
+      return 0
+    fi
+
+    if head -1 "$file" | grep -qi "html\|404\|not found\|error"; then
+      echo "Error: Downloaded file appears to be an error page"
+      return 1
+    fi
+
+    return 0
+  }
+
+  # Attempt download methods
+  download_attempt() {
+    echo "Attempting download method: $1"
+    
+    case $1 in
+      curl_zip)
+        curl -L -o wings.zip "$ZIP_URL" || return 1
+        validate_file "wings.zip" || return 1
+        unzip -o wings.zip && rm -f wings.zip
+        ;;
+      wget_zip)
+        wget -O wings.zip "$ZIP_URL" || return 1
+        validate_file "wings.zip" || return 1
+        unzip -o wings.zip && rm -f wings.zip
+        ;;
+      curl_tar)
+        curl -L -o wings.tar.gz "$TAR_URL" || return 1
+        validate_file "wings.tar.gz" || return 1
+        tar -xzf wings.tar.gz && rm -f wings.tar.gz
+        ;;
+      wget_tar)
+        wget -O wings.tar.gz "$TAR_URL" || return 1
+        validate_file "wings.tar.gz" || return 1
+        tar -xzf wings.tar.gz && rm -f wings.tar.gz
+        ;;
+      git_clone)
+        git clone --depth 1 --branch "$TAG" "$GIT_URL" wings || return 1
+        ;;
+      *)
+        return 1
+        ;;
+    esac
+    
+    # Find the actual wings directory (could be wings or wings-VERSION)
+    local wings_dir
+    wings_dir=$(find . -maxdepth 1 -type d -name "wings*" | head -n 1)
+    
+    if [ -z "$wings_dir" ]; then
+      echo "Error: No wings directory found after extraction"
+      return 1
+    fi
+
+    # If the directory is named with version (wings-1.11.10), rename it to just wings
+    if [[ "$wings_dir" != "./wings" ]]; then
+      mv "$wings_dir" "wings"
+    fi
+    
+    return 0
+  }
+
+  # Try download methods in sequence
+  for method in curl_zip wget_zip curl_tar wget_tar git_clone; do
+    if download_attempt "$method"; then
+      # Verify we have a wings directory
+      if [ -d "wings" ]; then
+        # Create target directory
+        mkdir -p /usr/local/bin/wings
+        
+        # Move contents to target directory (not the directory itself)
+        mv wings/* /usr/local/bin/wings/
+        
+        # Clean up
+        rm -rf wings
+        
+        success "Successfully downloaded and installed wings files using $method"
+        break
+      fi
+    fi
+    echo "Download method $method failed, trying next..."
+    sleep 2
+  done
+
+  # Clean up temp directory
+  cd /tmp && rm -rf "$TEMP_WINGSDIR"
+
+  # Download the binary for Wings
   mkdir -p /etc/pterodactyl
   curl -L -o /usr/local/bin/wings "$WINGS_DL_BASE_URL$ARCH"
-
   chmod u+x /usr/local/bin/wings
 
-  success "Pterodactyl Wings downloaded successfully"
+  success "Pterodactyl Wings downloaded and installed successfully"
 }
-
-install_golang() {
+install_golang() {`
   output "Installing Go 1.22.1..."
   wget https://go.dev/dl/go1.22.1.linux-amd64.tar.gz -O /tmp/go.tar.gz
   rm -rf /usr/local/go
