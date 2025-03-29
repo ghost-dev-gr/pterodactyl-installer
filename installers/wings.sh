@@ -323,52 +323,44 @@ perform_install() {
   mkdir -p /srv/server_certs
   chmod 700 /srv/server_certs
   
-  output "Downloading srv wings "
-  mkdir $WINGSDIR && \
-  cd $WINGSDIR && \
-  LOCATION=$(curl -s https://api.github.com/repos/pterodactyl/wings/releases/latest \
+output "Downloading srv wings"
+mkdir -p "$WINGSDIR" || { error "Failed to create $WINGSDIR"; return 1; }
+cd "$WINGSDIR" || { error "Failed to navigate to $WINGSDIR"; return 1; }
+
+LOCATION=$(curl -s https://api.github.com/repos/pterodactyl/wings/releases/latest \
   | grep "tag_name" \
-  | awk '{print "https://github.com/pterodactyl/wings/archive/" substr($2, 2, length($2)-3) ".zip"}') \
-  ; curl -L -o wings_latest.zip $LOCATION && \
-  unzip wings_latest.zip
+  | awk -F '"' '{print "https://github.com/pterodactyl/wings/archive/" $4 ".zip"}')
 
-  
-   # Add proxy endpoints to router.go
-  output "Adding proxy endpoints to router..."
-  ROUTER_FILE="/srv/wings/router/router.go"
-  if [ -f "$ROUTER_FILE" ]; then
-    sed -i '/server.POST("\/ws\/deny", postServerDenyWSTokens)/a \
-        server.POST("\/proxy\/create", postServerProxyCreate)\
-        server.POST("\/proxy\/delete", postServerProxyDelete)' "$ROUTER_FILE"
-    success "Proxy endpoints added to router"
-  else
-    warning "Router file not found at $ROUTER_FILE - proxy endpoints not added"
-  fi
-  
+if [ -z "$LOCATION" ]; then
+  error "Failed to fetch the latest Wings release URL."
+  return 1
+fi
 
-  # Stop the wings service before rebuilding it
-  output "Stopping Wings service..."
-  systemctl stop wings
+curl -L -o wings_latest.zip "$LOCATION" || { error "Failed to download Wings"; return 1; }
+unzip -o wings_latest.zip || { error "Failed to unzip Wings"; return 1; }
 
-  # Fetch the Go dependencies and build the Wings binary
-  output "Fetching Go dependencies and building Wings..."
-  go get github.com/go-acme/lego/v4 || { error "Failed to fetch Go dependencies"; return 1; }
-  go mod tidy || { error "Go mod tidy failed"; return 1; }
+# Add proxy endpoints to router.go
+output "Adding proxy endpoints to router..."
+ROUTER_FILE="/srv/wings/router/router.go"
+if [ -f "$ROUTER_FILE" ]; then
+  sed -i '/server.POST("\/ws\/deny", postServerDenyWSTokens)/a \
+      server.POST("\/proxy\/create", postServerProxyCreate)\
+      server.POST("\/proxy\/delete", postServerProxyDelete)' "$ROUTER_FILE"
+  success "Proxy endpoints added to router"
+else
+  warning "Router file not found at $ROUTER_FILE - proxy endpoints not added"
+fi
 
-  # Build the wings binary and install it
-  go build -o /usr/local/bin/wings || { error "Go build failed"; return 1; }
-  
-  # Ensure the binary has execute permissions
-  chmod +x /usr/local/bin/wings || { error "Failed to set executable permissions for Wings"; return 1; }
+# Stop, rebuild, and restart Wings
+systemctl stop wings || warning "Failed to stop Wings, continuing..."
+go get github.com/go-acme/lego/v4 || { error "Go get failed"; return 1; }
+go mod tidy || { error "Go mod tidy failed"; return 1; }
+go build -o /usr/local/bin/wings || { error "Go build failed"; return 1; }
+chmod +x /usr/local/bin/wings || { error "Failed to set executable permissions"; return 1; }
+systemctl start wings || { error "Failed to start Wings"; return 1; }
 
-  # Start the Wings service again
-  output "Starting Wings service..."
-  systemctl start wings
-
-  success "Wings installation and setup complete!"
-
-
-  return 0
+success "Wings installation and update completed successfully!"
+return 0
 }
 # ---------------- Installation ---------------- #
 
