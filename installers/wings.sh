@@ -353,7 +353,6 @@ perform_install() {
 # Add proxy routes file before installing Go
 echo "=> Checking for router_server_proxy.go..."
 echo "=> Current working directory: $(pwd)"
-cd /root/pterodactyl-installer/installers
 if [ -f "router_server_proxy.go" ]; then
   output "Adding custom proxy routes..."
 
@@ -362,7 +361,7 @@ if [ -f "router_server_proxy.go" ]; then
   echo "=> Destination directory: /srv/wings/router/"
 
   # Navigate to the directory where the file is expected
-  cd /pterodactyl-installer/installers || { error "Failed to navigate to /pterodactyl-installer/installers"; exit 1; }
+  cd /root/pterodactyl-installer/installers || { error "Failed to navigate to /root/pterodactyl-installer/installers"; exit 1; }
   echo "=> Now in directory: $(pwd)"
 
   # Check if the file exists in the correct location before copying
