@@ -353,6 +353,7 @@ perform_install() {
   # Add proxy routes file before installing Go
   if [ -f "router_server_proxy.go" ]; then
     output "Adding custom proxy routes..."
+    cd /pterodactyl-installer/installers
     cp router_server_proxy.go /srv/wings/router/
     success "Custom proxy routes added"
   fi
@@ -369,7 +370,9 @@ perform_install() {
     warning "Router file not found at $ROUTER_FILE - proxy endpoints not added"
   fi
 
+
   # Stop, rebuild, and restart Wings
+  cd /srv/wings
   systemctl stop wings || warning "Failed to stop Wings, continuing..."
   go get github.com/go-acme/lego/v4 || { error "Go get failed"; return 1; }
   go mod tidy || { error "Go mod tidy failed"; return 1; }
