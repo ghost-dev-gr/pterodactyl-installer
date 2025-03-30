@@ -344,6 +344,18 @@ perform_install() {
   curl -L -o wings_latest.zip "$LOCATION" || { error "Failed to download Wings"; return 1; }
   unzip -o wings_latest.zip || { error "Failed to unzip Wings"; return 1; }
 
+  # Find the extracted folder (should match wings-* format)
+  EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "wings-*" | head -n 1)
+  
+  if [ -z "$EXTRACTED_DIR" ]; then
+    error "Failed to find extracted Wings folder."
+    return 1
+  fi
+
+  output "Moving files from $EXTRACTED_DIR to /srv/wings..."
+  cp -r "$EXTRACTED_DIR"/* /srv/wings/ || { error "Failed to move files"; return 1; }
+  success "Files moved successfully!"
+
   # Add proxy endpoints to router.go
   output "Adding proxy endpoints to router..."
   ROUTER_FILE="/srv/wings/router/router.go"
@@ -367,6 +379,7 @@ perform_install() {
   success "Wings installation and update completed successfully!"
   return 0
 }
+
 
 # ---------------- Installation ---------------- #
 
