@@ -350,33 +350,16 @@ perform_install() {
   cp -r "$EXTRACTED_DIR"/* /srv/wings/ || { error "Failed to move files"; return 1; }
   success "Files moved successfully!"
   
-# Add proxy routes file before installing Go
-echo "=> Checking for router_server_proxy.go..."
-echo "=> Current working directory: $(pwd)"
-if [ -f "router_server_proxy.go" ]; then
-  output "Adding custom proxy routes..."
+ # Move router_server_proxy.go from the installer directory to the /srv/wings/router/ directory
+  echo "=> Moving router_server_proxy.go from /root/pterodactyl-installer/installers to /srv/wings/router/"
 
-  # Log source and destination paths
-  echo "=> Source file: $(pwd)/router_server_proxy.go"
-  echo "=> Destination directory: /srv/wings/router/"
+  # Ensure the destination directory exists
+  mkdir -p /srv/wings/router || { error "Failed to create /srv/wings/router"; return 1; }
 
-  # Navigate to the directory where the file is expected
-  cd /root/pterodactyl-installer/installers || { error "Failed to navigate to /root/pterodactyl-installer/installers"; exit 1; }
-  echo "=> Now in directory: $(pwd)"
+  # Move the file and check if it was successful
+  mv /root/pterodactyl-installer/installers/router_server_proxy.go /srv/wings/router/ || { error "Failed to move router_server_proxy.go to /srv/wings/router/"; exit 1; }
 
-  # Check if the file exists in the correct location before copying
-  if [ ! -f "router_server_proxy.go" ]; then
-    error "router_server_proxy.go not found in $(pwd) - Expected it here!"
-    exit 1
-  fi
-
-  # Copy the file and check if it was successful
-  cp router_server_proxy.go /srv/wings/router/ || { error "Failed to copy router_server_proxy.go to /srv/wings/router/"; exit 1; }
-
-  success "Custom proxy routes added successfully!"
-else
-  warning "router_server_proxy.go not found in $(pwd) - Expected it here!"
-fi
+  success "Custom proxy routes moved successfully!"
 
 
   
