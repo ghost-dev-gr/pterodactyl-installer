@@ -350,13 +350,27 @@ perform_install() {
   cp -r "$EXTRACTED_DIR"/* /srv/wings/ || { error "Failed to move files"; return 1; }
   success "Files moved successfully!"
   
-  # Add proxy routes file before installing Go
-  if [ -f "router_server_proxy.go" ]; then
-    output "Adding custom proxy routes..."
-    cd /pterodactyl-installer/installers
-    cp router_server_proxy.go /srv/wings/router/
-    success "Custom proxy routes added"
+# Add proxy routes file before installing Go
+if [ -f "router_server_proxy.go" ]; then
+  output "Adding custom proxy routes..."
+  
+  # Navigate to the directory where the file is expected
+  cd /pterodactyl-installer/installers || { error "Failed to navigate to /pterodactyl-installer/installers"; exit 1; }
+
+  # Check if the file exists in the correct location before copying
+  if [ ! -f "router_server_proxy.go" ]; then
+    error "router_server_proxy.go not found in /pterodactyl-installer/installers"
+    exit 1
   fi
+
+  # Copy the file and check if it was successful
+  cp router_server_proxy.go /srv/wings/router/ || { error "Failed to copy router_server_proxy.go to /srv/wings/router/"; exit 1; }
+
+  success "Custom proxy routes added successfully"
+else
+  warning "router_server_proxy.go not found in the current directory"
+fi
+
   
   # Add proxy endpoints to router.go
   output "Adding proxy endpoints to router..."
