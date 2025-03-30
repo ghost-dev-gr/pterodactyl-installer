@@ -353,8 +353,7 @@ perform_install() {
 # Add proxy routes file before installing Go
 echo "=> Checking for router_server_proxy.go..."
 echo "=> Current working directory: $(pwd)"
-cd /root
-cd pterodactyl-installer/installers
+cd /root/pterodactyl-installer/installers
 if [ -f "router_server_proxy.go" ]; then
   output "Adding custom proxy routes..."
 
