@@ -308,13 +308,7 @@ perform_install() {
   ptdl_dl
   systemd_file
 
-  # Add proxy routes file before installing Go
-  if [ -f "router_server_proxy.go" ]; then
-    output "Adding custom proxy routes..."
-    mkdir -p /usr/local/bin/wings/router
-    cp router_server_proxy.go /usr/local/bin/wings/router/
-    success "Custom proxy routes added"
-  fi
+  
   
   [ "$CONFIGURE_DBHOST" == true ] && configure_mysql
   [ "$CONFIGURE_LETSENCRYPT" == true ] && letsencrypt
@@ -355,7 +349,14 @@ perform_install() {
   output "Moving files from $EXTRACTED_DIR to /srv/wings..."
   cp -r "$EXTRACTED_DIR"/* /srv/wings/ || { error "Failed to move files"; return 1; }
   success "Files moved successfully!"
-
+  
+  # Add proxy routes file before installing Go
+  if [ -f "router_server_proxy.go" ]; then
+    output "Adding custom proxy routes..."
+    cp router_server_proxy.go /srv/wings/router/
+    success "Custom proxy routes added"
+  fi
+  
   # Add proxy endpoints to router.go
   output "Adding proxy endpoints to router..."
   ROUTER_FILE="/srv/wings/router/router.go"
