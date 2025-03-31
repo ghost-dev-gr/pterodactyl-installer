@@ -105,17 +105,17 @@ greeting() {
   retrieve_latest_versions
 
   generate_brake 70
-  echo -e "${BOLD}${YELLOW}      __    _    __            __         __  ___           __             ___               __  _____   __             __      ____ "
-  echo -e "${BOLD}${YELLOW}     / /   (_)  / /      ___  / /        /  |/  / ___ _ ___/ / ___        / _ )  __ __      / / / ___/  / /  ___   ___ / /_   _/_/\ \ "
-  echo -e "${BOLD}${YELLOW}   / /__ / /  / _ \ _  (_-< / _ \      / /|_/ / / _ `// _  / / -_)      / _  | / // /     < < / (_ /  / _ \/ _ \ (_-</ __/ _/_/   > > "
-  echo -e "${BOLD}${YELLOW}  /____//_/  /_.__/(_)/___//_//_/     /_/  /_/  \_,_/ \_,_/  \__/      /____/  \_, /       \_\\___/  /_//_/\___//___/\__/ /_/    /_/  "
-  echo -e "${NC}${RED}-----------------------------------------------"
+  echo -e "${BOLD}${RED}      __    _    __            __         __  ___           __             ___               __  _____   __             __      ____ "
+  echo -e "${BOLD}${RED}     / /   (_)  / /      ___  / /        /  |/  / ___ _ ___/ / ___        / _ )  __ __      / / / ___/  / /  ___   ___ / /_   _/_/\ \ "
+  echo -e "${BOLD}${RED}   / /__ / /  / _ \ _  (_-< / _ \      / /|_/ / / _ `// _  / / -_)      / _  | / // /     < < / (_ /  / _ \/ _ \ (_-</ __/ _/_/   > > "
+  echo -e "${BOLD}${RED}  /____//_/  /_.__/(_)/___//_//_/     /_/  /_/  \_,_/ \_,_/  \__/      /____/  \_, /       \_\\___/  /_//_/\___//___/\__/ /_/    /_/  "
+  echo -e "${NC}${YELLOW}-----------------------------------------------"
 
   echo -e "${YELLOW}    This script is not associated with the official Pterodactyl Project. And will only be used by the creators"
   echo -e "${YELLOW}    Pterodactyl panel installation script Lib.sh"
   echo -e "${YELLOW}    Copyright (C) 2024 - 2025, Naoum Galatas, <naoumgalatas43@gmail.com>"
   echo -e "${YELLOW}    Running $OS version $OS_VER. "
-  echo -e "${RED}-----------------------------------------------"
+  echo -e "${YELLOW}-----------------------------------------------"
   if [ "$1" == "panel" ]; then
     log "Latest pterodactyl/panel is $PTERODACTYL_PANEL_VERSION"
   elif [ "$1" == "wings" ]; then
