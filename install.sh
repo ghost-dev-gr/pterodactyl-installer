@@ -1,54 +1,52 @@
 #!/bin/bash
 
-set -e
+# Colors for custom UI
+NC="\033[0m"           # No Color
+RED="\033[31m"         # Red
+GREEN="\033[32m"       # Green
+YELLOW="\033[33m"      # Yellow
+BLUE="\033[34m"        # Blue
+BOLD="\033[1m"         # Bold
+UNDERLINE="\033[4m"    # Underline
+                                                                                  
 
-######################################################################################
-#                                                                                    #
-# Project 'pterodactyl-installer'                                                    #
-#                                                                                    #
-# Copyright (C) 2018 - 2025, Vilhelm Prytz, <vilhelm@prytznet.se>                    #
-#                                                                                    #
-#   This program is free software: you can redistribute it and/or modify             #
-#   it under the terms of the GNU General Public License as published by             #
-#   the Free Software Foundation, either version 3 of the License, or                #
-#   (at your option) any later version.                                              #
-#                                                                                    #
-#   This program is distributed in the hope that it will be useful,                  #
-#   but WITHOUT ANY WARRANTY; without even the implied warranty of                   #
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                    #
-#   GNU General Public License for more details.                                     #
-#                                                                                    #
-#   You should have received a copy of the GNU General Public License                #
-#   along with this program.  If not, see <https://www.gnu.org/licenses/>.           #
-#                                                                                    #
-# https://github.com/pterodactyl-installer/pterodactyl-installer/blob/master/LICENSE #
-#                                                                                    #
-# This script is not associated with the official Pterodactyl Project.               #
-# https://github.com/ghost-dev-gr/pterodactyl-installer                     #
-#                                                                                    #
-######################################################################################
+# Custom ASCII Art
+clear
+echo -e "${BOLD}${BLUE}     ___  ________      ___  ___      ________      ________       _________         ___  ___   "
+echo -e "${BOLD}${BLUE}    /  /||\   ____\    |\  \|\  \    |\   __  \    |\   ____\     |\___   ___\      /  /||\  \ "
+echo -e "${BOLD}${BLUE}   /  / /\ \  \___|    \ \  \\\  \   \ \  \|\  \   \ \  \___|_    \|___ \  \_|     /  // \ \  \ "
+echo -e "${BOLD}${BLUE}  /  / /  \ \  \  ___   \ \   __  \   \ \  \\\  \   \ \_____  \        \ \  \     /  //   \ \  \ "
+echo -e "${BOLD}${BLUE} |\  \/    \ \  \|\  \   \ \  \ \  \   \ \  \\\  \   \|____|\  \        \ \  \   /  //     \/  /| "
+echo -e "${BOLD}${BLUE} \ \  \     \ \_______\   \ \__\ \__\   \ \_______\    ____\_\  \        \ \__\ /_ //      /  // "
+echo -e "${BOLD}${BLUE}  \ \__\     \|_______|    \|__|\|__|    \|_______|   |\_________\        \|__||__|/      /_ //"
+echo -e "${BOLD}${BLUE}   \|__|                                              \|_________|                       |__|/ "
+echo -e "${NC}${RED}-----------------------------------------------"
+echo -e "${YELLOW}     Welcome to the Custom Pterodactyl Installer ${NC}"
+echo -e "${RED}-----------------------------------------------"
 
+# Script Variables
 export GITHUB_SOURCE="v1.1.1"
 export SCRIPT_RELEASE="v1.1.1"
 export GITHUB_BASE_URL="https://raw.githubusercontent.com/ghost-dev-gr/pterodactyl-installer"
 
 LOG_PATH="/var/log/pterodactyl-installer.log"
 
-# check for curl
+# Check if curl is installed
 if ! [ -x "$(command -v curl)" ]; then
-  echo "* curl is required in order for this script to work."
-  echo "* install using apt (Debian and derivatives) or yum/dnf (CentOS)"
+  echo -e "${RED}* curl is required in order for this script to work.${NC}"
+  echo -e "${RED}* Install curl using apt (Debian) or yum/dnf (CentOS)${NC}"
   exit 1
 fi
 
-# Always remove lib.sh, before downloading it
+# Remove any old lib.sh before downloading it again
 [ -f /tmp/lib.sh ] && rm -rf /tmp/lib.sh
 curl -sSL -o /tmp/lib.sh "$GITHUB_BASE_URL"/master/lib/lib.sh
 # shellcheck source=lib/lib.sh
 source /tmp/lib.sh
 
+# Function to execute installation steps
 execute() {
-  echo -e "\n\n* pterodactyl-installer $(date) \n\n" >>$LOG_PATH
+  echo -e "\n\n* Pterodactyl Installer $(date) \n\n" >>$LOG_PATH
 
   [[ "$1" == *"canary"* ]] && export GITHUB_SOURCE="master" && export SCRIPT_RELEASE="canary"
   update_lib_source
@@ -60,55 +58,67 @@ execute() {
     if [[ "$CONFIRM" =~ [Yy] ]]; then
       execute "$2"
     else
-      error "Installation of $2 aborted."
+      echo -e "${RED}Installation of $2 aborted.${NC}"
       exit 1
     fi
   fi
 }
 
+# Welcome function (could be enhanced)
 welcome ""
 
+# Main Menu
 done=false
 while [ "$done" == false ]; do
+  # Options for the user to choose from
   options=(
-    "Install the panel"
+    "Install the Panel"
     "Install Wings"
-    "Install both [0] and [1] on the same machine (wings script runs after panel)"
-    # "Uninstall panel or wings\n"
-
-    "Install panel with canary version of the script (the versions that lives in master, may be broken!)"
-    "Install Wings with canary version of the script (the versions that lives in master, may be broken!)"
-    "Install both [3] and [4] on the same machine (wings script runs after panel)"
-    "Uninstall panel or wings with canary version of the script (the versions that lives in master, may be broken!)"
+    "Install both [Panel and Wings] on the same machine"
+    "Install panel with canary version"
+    "Install Wings with canary version"
+    "Install both [Panel and Wings] with canary version"
+    "Uninstall Panel or Wings"
   )
 
   actions=(
     "panel"
     "wings"
     "panel;wings"
-    # "uninstall"
-
     "panel_canary"
     "wings_canary"
     "panel_canary;wings_canary"
-    "uninstall_canary"
+    "uninstall"
   )
 
-  output "What would you like to do?"
+  # Display options with custom design
+  echo -e "${BOLD}${GREEN}Select the operation you wish to perform:${NC}"
+  echo -e "${YELLOW}-----------------------------------------------${NC}"
 
   for i in "${!options[@]}"; do
-    output "[$i] ${options[$i]}"
+    echo -e "${BOLD}${BLUE}[${i}]${NC} ${options[$i]}"
   done
 
-  echo -n "* Input 0-$((${#actions[@]} - 1)): "
+  echo -e "${YELLOW}-----------------------------------------------${NC}"
+  echo -n "* Please input a number from 0-$((${#actions[@]} - 1)): "
   read -r action
 
-  [ -z "$action" ] && error "Input is required" && continue
+  # Validate input
+  [ -z "$action" ] && echo -e "${RED}Input is required! Please try again.${NC}" && continue
 
   valid_input=("$(for ((i = 0; i <= ${#actions[@]} - 1; i += 1)); do echo "${i}"; done)")
-  [[ ! " ${valid_input[*]} " =~ ${action} ]] && error "Invalid option"
-  [[ " ${valid_input[*]} " =~ ${action} ]] && done=true && IFS=";" read -r i1 i2 <<<"${actions[$action]}" && execute "$i1" "$i2"
+  if [[ ! " ${valid_input[*]} " =~ ${action} ]]; then
+    echo -e "${RED}Invalid option! Please try again.${NC}"
+    continue
+  fi
+
+  # Execute the chosen action
+  done=true
+  IFS=";" read -r i1 i2 <<<"${actions[$action]}"
+  execute "$i1" "$i2"
 done
 
-# Remove lib.sh, so next time the script is run the, newest version is downloaded.
+# Clean up lib.sh after use
 rm -rf /tmp/lib.sh
+
+echo -e "${GREEN}Installation process completed!${NC}"
