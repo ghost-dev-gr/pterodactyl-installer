@@ -64,8 +64,6 @@ execute() {
   fi
 }
 
-# Welcome function (could be enhanced)
-welcome ""
 
 # Main Menu
 done=false
