@@ -91,13 +91,13 @@ while [ "$done" == false ]; do
 
   # Display options with custom design
   echo -e "${BOLD}${GREEN}Select the operation you wish to perform:${NC}"
-  echo -e "${YELLOW}-----------------------------------------------${NC}"
+  echo -e "${RED}-----------------------------------------------${NC}"
 
   for i in "${!options[@]}"; do
     echo -e "${BOLD}${BLUE}[${i}]${NC} ${options[$i]}"
   done
 
-  echo -e "${YELLOW}-----------------------------------------------${NC}"
+  echo -e "${RED}-----------------------------------------------${NC}"
   echo -n "* Please input a number from 0-$((${#actions[@]} - 1)): "
   read -r action
 
