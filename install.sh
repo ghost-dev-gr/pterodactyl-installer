@@ -49,7 +49,7 @@ execute() {
   echo -e "\n\n* Pterodactyl Installer $(date) \n\n" >>$LOG_PATH
 
   [[ "$1" == *"canary"* ]] && export GITHUB_SOURCE="master" && export SCRIPT_RELEASE="canary"
-  update_lib_source
+  update_library_source
   run_ui "${1//_canary/}" |& tee -a $LOG_PATH
 
   if [[ -n $2 ]]; then
