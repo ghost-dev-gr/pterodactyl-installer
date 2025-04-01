@@ -166,7 +166,7 @@ enable_services() {
 }
 
 dep_install() {
-  output "Installing dependencies for $OS $OS_VER..."
+  log "Installing dependencies for $OS $OS_VER..."
 
   [ "$CONFIGURE_FIREWALL" == true ] && install_firewall && firewall_ports
 
@@ -219,7 +219,7 @@ ptdl_dl() {
 }
 
 install_golang() {
-  output "Installing Go 1.22.1..."
+  log "Installing Go 1.22.1..."
   wget https://go.dev/dl/go1.22.1.linux-amd64.tar.gz -O /tmp/go.tar.gz
   rm -rf /usr/local/go
   tar -C /usr/local -xzf /tmp/go.tar.gz
@@ -228,7 +228,7 @@ install_golang() {
 }
 
 systemd_file() {
-  output "Installing systemd service.."
+  log "Installing systemd service.."
 
   curl -o /etc/systemd/system/wings.service "$GITHUB_URL"/configs/wings.service
   systemctl daemon-reload
@@ -238,17 +238,17 @@ systemd_file() {
 }
 
 firewall_ports() {
-  output "Opening port 22 (SSH), 8080 (Wings Port), 2022 (Wings SFTP Port)"
+  log "Opening port 22 (SSH), 8080 (Wings Port), 2022 (Wings SFTP Port)"
 
   [ "$CONFIGURE_LETSENCRYPT" == true ] && firewall_allow_ports "80 443"
   [ "$CONFIGURE_DB_FIREWALL" == true ] && firewall_allow_ports "3306"
 
   firewall_allow_ports "22"
-  output "Allowed port 22"
+  log "Allowed port 22"
   firewall_allow_ports "8080"
-  output "Allowed port 8080"
+  log "Allowed port 8080"
   firewall_allow_ports "2022"
-  output "Allowed port 2022"
+  log "Allowed port 2022"
 
   success "Firewall ports opened!"
 }
@@ -256,7 +256,7 @@ firewall_ports() {
 letsencrypt() {
   FAILED=false
 
-  output "Configuring LetsEncrypt.."
+  log "Configuring LetsEncrypt.."
 
   # If user has nginx
   systemctl stop nginx || true
@@ -275,7 +275,7 @@ letsencrypt() {
 }
 
 configure_mysql() {
-  output "Configuring MySQL.."
+  log "Configuring MySQL.."
 
   create_db_user "$MYSQL_DBHOST_USER" "$MYSQL_DBHOST_PASSWORD" "$MYSQL_DBHOST_HOST"
   grant_all_privileges "*" "$MYSQL_DBHOST_USER" "$MYSQL_DBHOST_HOST"
@@ -301,7 +301,7 @@ configure_mysql() {
 # --------------- Main functions --------------- #
 
 perform_install() {
-  output "Installing pterodactyl wings.."
+  log "Installing pterodactyl wings.."
   dep_install
   
   install_golang
@@ -317,7 +317,7 @@ perform_install() {
   mkdir -p /srv/server_certs
   chmod 700 /srv/server_certs
   
-  output "Downloading srv wings"
+  log "Downloading srv wings"
 
   # Set the installation directory
   INSTALL_DIR="/srv/wings"
@@ -346,7 +346,7 @@ perform_install() {
     return 1
   fi
 
-  output "Moving files from $EXTRACTED_DIR to /srv/wings..."
+  log "Moving files from $EXTRACTED_DIR to /srv/wings..."
   cp -r "$EXTRACTED_DIR"/* /srv/wings/ || { error "Failed to move files"; return 1; }
   success "Files moved successfully!"
   
@@ -364,7 +364,7 @@ perform_install() {
 
   
   # Add proxy endpoints to router.go
-  output "Adding proxy endpoints to router..."
+  log "Adding proxy endpoints to router..."
   ROUTER_FILE="/srv/wings/router/router.go"
   if [ -f "$ROUTER_FILE" ]; then
     sed -i '/server.POST("\/ws\/deny", postServerDenyWSTokens)/a \
