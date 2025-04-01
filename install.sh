@@ -24,99 +24,87 @@ echo -e "${NC}${RED}-----------------------------------------------"
 echo -e "${YELLOW}     Welcome to the Custom Pterodactyl Installer ${NC}"
 echo -e "${RED}-----------------------------------------------"
 
-# Script Variables
 export GITHUB_SOURCE="v1.1.1"
 export SCRIPT_RELEASE="v1.1.1"
-export GITHUB_BASE_URL="https://raw.githubusercontent.com/ghost-dev-gr/pterodactyl-installer"
+export GITHUB_BASE_URL="https://raw.githubusercontent.com/phantom-dev-team/dragonfly-installer"
 
-LOG_PATH="/var/log/pterodactyl-installer.log"
+RECORD_FILE="/var/log/dragonfly-setup.log"
 
-# Check if curl is installed
+# check for curl
 if ! [ -x "$(command -v curl)" ]; then
-  echo -e "${RED}* curl is required in order for this script to work.${NC}"
-  echo -e "${RED}* Install curl using apt (Debian) or yum/dnf (CentOS)${NC}"
+  notify "* curl is needed for this setup to operate."
+  notify "* install via apt (Debian/Ubuntu) or yum/dnf (RHEL)"
   exit 1
 fi
 
-# Remove any old lib.sh before downloading it again
-[ -f /tmp/lib.sh ] && rm -rf /tmp/lib.sh
-curl -sSL -o /tmp/lib.sh "$GITHUB_BASE_URL"/master/lib/lib.sh
-# shellcheck source=lib/lib.sh
-source /tmp/lib.sh
+# Remove previous helper file if present
+[ -f /tmp/helper.sh ] && rm -rf /tmp/helper.sh
+curl -sSL -o /tmp/helper.sh "$GITHUB_BASE_URL"/master/lib/helper.sh
+# shellcheck source=lib/helper.sh
+source /tmp/helper.sh
 
-# Function to execute installation steps
-execute() {
-  echo -e "\n\n* Pterodactyl Installer $(date) \n\n" >>$LOG_PATH
+launch_process() {
+  echo -e "\n\n* dragonfly-installer $(date) \n\n" >>$RECORD_FILE
 
-  [[ "$1" == *"canary"* ]] && export GITHUB_SOURCE="master" && export SCRIPT_RELEASE="canary"
-  update_library_source
-  run_ui "${1//_canary/}" |& tee -a $LOG_PATH
+  [[ "$1" == *"testing"* ]] && export GITHUB_SOURCE="main" && export SCRIPT_RELEASE="testing"
+  refresh_helper_source
+  start_interface "${1//_testing/}" |& tee -a $RECORD_FILE
 
   if [[ -n $2 ]]; then
-    echo -e -n "* Installation of $1 completed. Do you want to proceed to $2 installation? (y/N): "
-    read -r CONFIRM
-    if [[ "$CONFIRM" =~ [Yy] ]]; then
-      execute "$2"
+    echo -e -n "* Setup of $1 done. Continue with $2 setup? (y/N): "
+    read -r REPLY
+    if [[ "$REPLY" =~ [Yy] ]]; then
+      launch_process "$2"
     else
-      echo -e "${RED}Installation of $2 aborted.${NC}"
+      fail "Setup of $2 cancelled."
       exit 1
     fi
   fi
 }
 
+display_intro ""
 
-# Main Menu
-done=false
-while [ "$done" == false ]; do
-  # Options for the user to choose from
-  options=(
-    "Install the Panel"
-    "Install Wings"
-    "Install both [Panel and Wings] on the same machine"
-    "Install panel with canary version"
-    "Install Wings with canary version"
-    "Install both [Panel and Wings] with canary version"
-    "Uninstall Panel or Wings"
+completed=no
+while [ "$completed" == no ]; do
+  selections=(
+    "Setup the control panel"
+    "Setup the daemon"
+    "Setup both [0] and [1] on this system (daemon setup runs post panel)"
+    # "Remove panel or daemon\n"
+
+    "Setup panel using testing edition of this setup (unstable, may contain issues!)"
+    "Setup daemon using testing edition of this setup (unstable, may contain issues!)"
+    "Setup both [3] and [4] on this system (daemon setup runs post panel)"
+    "Remove panel or daemon with testing edition of this setup (unstable, may contain issues!)"
   )
 
-  actions=(
-    "panel"
-    "wings"
-    "panel;wings"
-    "panel_canary"
-    "wings_canary"
-    "panel_canary;wings_canary"
-    "uninstall"
+  operations=(
+    "controlpanel"
+    "daemon"
+    "controlpanel;daemon"
+    # "remove"
+
+    "controlpanel_testing"
+    "daemon_testing"
+    "controlpanel_testing;daemon_testing"
+    "remove_testing"
   )
 
-  # Display options with custom design
-  echo -e "${BOLD}${GREEN}Select the operation you wish to perform:${NC}"
-  echo -e "${RED}-----------------------------------------------${NC}"
+  inform "What operation should we perform?"
 
-  for i in "${!options[@]}"; do
-    echo -e "${BOLD}${BLUE}[${i}]${NC} ${options[$i]}"
+  for idx in "${!selections[@]}"; do
+    inform "[$idx] ${selections[$idx]}"
   done
 
-  echo -e "${RED}-----------------------------------------------${NC}"
-  echo -n "* Please input a number from 0-$((${#actions[@]} - 1)): "
-  read -r action
+  echo -n "* Choose 0-$((${#operations[@]} - 1)): "
+  read -r choice
 
-  # Validate input
-  [ -z "$action" ] && echo -e "${RED}Input is required! Please try again.${NC}" && continue
+  [ -z "$choice" ] && fail "Selection required" && continue
 
-  valid_input=("$(for ((i = 0; i <= ${#actions[@]} - 1; i += 1)); do echo "${i}"; done)")
-  if [[ ! " ${valid_input[*]} " =~ ${action} ]]; then
-    echo -e "${RED}Invalid option! Please try again.${NC}"
-    continue
-  fi
-
-  # Execute the chosen action
-  done=true
-  IFS=";" read -r i1 i2 <<<"${actions[$action]}"
-  execute "$i1" "$i2"
+  valid_choices=("$(for ((i = 0; i <= ${#operations[@]} - 1; i += 1)); do echo "${i}"; done)")
+  [[ ! " ${valid_choices[*]} " =~ ${choice} ]] && fail "Invalid selection"
+  [[ " ${valid_choices[*]} " =~ ${choice} ]] && completed=yes && IFS=";" read -r op1 op2 <<<"${operations[$choice]}" && launch_process "$op1" "$op2"
 done
 
-# Clean up lib.sh after use
-rm -rf /tmp/lib.sh
-
-echo -e "${GREEN}Installation process completed!${NC}"
+# Cleanup helper file
+rm -rf /tmp/helper.sh
