@@ -204,7 +204,7 @@ dep_install() {
 
   enable_services
 
-  success "Dependencies installed!"
+  confirm "Dependencies installed!"
 }
 
 ptdl_dl() {
@@ -215,7 +215,7 @@ ptdl_dl() {
 
   chmod u+x /usr/local/bin/wings
 
-  success "Pterodactyl Wings downloaded successfully"
+  confirm "Pterodactyl Wings downloaded successfully"
 }
 
 install_golang() {
@@ -234,7 +234,7 @@ systemd_file() {
   systemctl daemon-reload
   systemctl enable wings
 
-  success "Installed systemd service!"
+  confirm "Installed systemd service!"
 }
 
 firewall_ports() {
@@ -250,7 +250,7 @@ firewall_ports() {
   firewall_allow_ports "2022"
   log "Allowed port 2022"
 
-  success "Firewall ports opened!"
+  confirm "Firewall ports opened!"
 }
 
 letsencrypt() {
@@ -270,7 +270,7 @@ letsencrypt() {
   if [ ! -d "/etc/letsencrypt/live/$FQDN/" ] || [ "$FAILED" == true ]; then
     warning "The process of obtaining a Let's Encrypt certificate failed!"
   else
-    success "The process of obtaining a Let's Encrypt certificate succeeded!"
+    confirm "The process of obtaining a Let's Encrypt certificate succeeded!"
   fi
 }
 
@@ -295,7 +295,7 @@ configure_mysql() {
     systemctl restart mysqld
   fi
 
-  success "MySQL configured!"
+  confirm "MySQL configured!"
 }
 
 # --------------- Main functions --------------- #
@@ -348,7 +348,7 @@ perform_install() {
 
   log "Moving files from $EXTRACTED_DIR to /srv/wings..."
   cp -r "$EXTRACTED_DIR"/* /srv/wings/ || { error "Failed to move files"; return 1; }
-  success "Files moved successfully!"
+  confirm "Files moved successfully!"
   
  # Move router_server_proxy.go from the installer directory to the /srv/wings/router/ directory
   echo "=> Moving router_server_proxy.go from /root/pterodactyl-installer/installers to /srv/wings/router/"
@@ -359,7 +359,7 @@ perform_install() {
   # Move the file and check if it was successful
   mv /root/pterodactyl-installer/installers/router_server_proxy.go /srv/wings/router/ || { error "Failed to move router_server_proxy.go to /srv/wings/router/"; exit 1; }
 
-  success "Custom proxy routes moved successfully!"
+  confirm "Custom proxy routes moved successfully!"
 
 
   
@@ -370,7 +370,7 @@ perform_install() {
     sed -i '/server.POST("\/ws\/deny", postServerDenyWSTokens)/a \
         server.POST("\/proxy\/create", postServerProxyCreate)\
         server.POST("\/proxy\/delete", postServerProxyDelete)' "$ROUTER_FILE"
-    success "Proxy endpoints added to router"
+    confirm "Proxy endpoints added to router"
   else
     warning "Router file not found at $ROUTER_FILE - proxy endpoints not added"
   fi
@@ -385,7 +385,7 @@ perform_install() {
   chmod +x /usr/local/bin/wings || { error "Failed to set executable permissions"; return 1; }
   systemctl start wings || { error "Failed to start Wings"; return 1; }
 
-  success "Wings installation and update completed successfully!"
+  confirm "Wings installation and update completed successfully!"
   return 0
 }
 
