@@ -13,96 +13,97 @@ UNDERLINE="\033[4m"    # Underline
                                                                                   
 # ------------------ Variables ----------------- #
 
-# Versioning
-export GITHUB_SOURCE=${GITHUB_SOURCE:-master}
-export SCRIPT_RELEASE=${SCRIPT_RELEASE:-canary}
 
-# Pterodactyl versions
-export PTERODACTYL_PANEL_VERSION=""
-export PTERODACTYL_WINGS_VERSION=""
+# Version info
+export GITHUB_SOURCE=${GITHUB_SOURCE:-main}
+export SCRIPT_RELEASE=${SCRIPT_RELEASE:-testing}
 
-# Path (export everything that is possible, doesn't matter that it exists already)
+# Dragonfly editions
+export DRAGONFLY_CP_VERSION=""
+export DRAGONFLY_DAEMON_VERSION=""
+
+# System paths
 export PATH="$PATH:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin"
 
-# OS
-export OS=""
-export OS_VER_MAJOR=""
-export CPU_ARCHITECTURE=""
-export ARCH=""
-export SUPPORTED=false
+# System info
+export PLATFORM=""
+export PLATFORM_MAJOR=""
+export CPU_TYPE=""
+export BINARY_ARCH=""
+export IS_SUPPORTED=false
 
-# download URLs
-export PANEL_DL_URL="https://github.com/ghost-dev-gr/panel/releases/latest/download/panel.tar.gz"
-export WINGS_DL_BASE_URL="https://github.com/pterodactyl/wings/releases/latest/download/wings_linux_"
-export MARIADB_URL="https://downloads.mariadb.com/MariaDB/mariadb_repo_setup"
-export GITHUB_BASE_URL=${GITHUB_BASE_URL:-"https://raw.githubusercontent.com/dev-ghost-gr/pterodactyl-installer"}
-export GITHUB_URL="$GITHUB_BASE_URL/$GITHUB_SOURCE"
+# Resource locations
+export CP_DOWNLOAD_URL="https://github.com/phantom-dev-team/panel/releases/latest/download/panel.tar.gz"
+export DAEMON_DOWNLOAD_BASE="https://github.com/phantom-dev-team/daemon/releases/latest/download/daemon_linux_"
+export MYSQL_SETUP_URL="https://downloads.mariadb.com/MariaDB/mariadb_repo_setup"
+export GITHUB_BASE_URL=${GITHUB_BASE_URL:-"https://raw.githubusercontent.com/dev-phantom-team/dragonfly-installer"}
+export GITHUB_RESOURCE_URL="$GITHUB_BASE_URL/$GITHUB_SOURCE"
 
-# Colors
-COLOR_YELLOW='\033[1;33m'
-COLOR_GREEN='\033[0;32m'
-COLOR_RED='\033[0;31m'
-COLOR_NC='\033[0m'
+# Display colors
+COLOR_AMBER='\033[1;33m'
+COLOR_LIME='\033[0;32m'
+COLOR_RUBY='\033[0;31m'
+COLOR_RESET='\033[0m'
 
-# email input validation regex
-email_regex="^(([A-Za-z0-9]+((\.|\-|\_|\+)?[A-Za-z0-9]?)*[A-Za-z0-9]+)|[A-Za-z0-9]+)@(([A-Za-z0-9]+)+((\.|\-|\_)?([A-Za-z0-9]+)+)*)+\.([A-Za-z]{2,})+$"
+# Email validation pattern
+email_pattern="^(([A-Za-z0-9]+((\.|\-|\_|\+)?[A-Za-z0-9]?)*[A-Za-z0-9]+)|[A-Za-z0-9]+)@(([A-Za-z0-9]+)+((\.|\-|\_)?([A-Za-z0-9]+)+)*)+\.([A-Za-z]{2,})+$"
 
-# Charset used to generate random passwords
-password_charset='A-Za-z0-9!"#%&()*+,-./:;<=>?@[\]^_`{|}~'
+# Password generation characters
+pass_chars='A-Za-z0-9!"#%&()*+,-./:;<=>?@[\]^_`{|}~'
 
-# --------------------- Lib -------------------- #
+# --------------------- Core -------------------- #
 
-lib_loaded() {
+core_initialized() {
   return 0
 }
 
-# -------------- Visual functions -------------- #
+# -------------- Display functions -------------- #
 
-log() {
+inform() {
   echo -e "* $1"
 }
 
-confirm() {
+succeed() {
   echo ""
-  log "${COLOR_GREEN}CONFIRMED${COLOR_NC}: $1"
+  inform "${COLOR_LIME}SUCCESS${COLOR_RESET}: $1"
   echo ""
 }
 
 fail() {
   echo ""
-  echo -e "* ${COLOR_RED}FAILED${COLOR_NC}: $1" 1>&2
+  echo -e "* ${COLOR_RUBY}FAILURE${COLOR_RESET}: $1" 1>&2
   echo ""
 }
 
 alert() {
   echo ""
-  log "${COLOR_YELLOW}ALERT${COLOR_NC}: $1"
+  inform "${COLOR_AMBER}ALERT${COLOR_RESET}: $1"
   echo ""
 }
 
-generate_brake() {
+draw_line() {
   for ((n = 0; n < $1; n++)); do
     echo -n "#"
   done
   echo ""
 }
 
-list_output() {
-  generate_brake 30
-  for word in $1; do
-    log "$word"
+display_list() {
+  draw_line 30
+  for item in $1; do
+    inform "$item"
   done
-  generate_brake 30
+  draw_line 30
   echo ""
 }
 
-linkify() {
+create_link() {
   echo -e "\e]8;;${1}\a${1}\e]8;;\a"
 }
 
 # First argument is wings / panel / neither
-greeting() {
-  retrieve_latest_versions
+show_intro() {
+  fetch_latest_versions
 
   generate_brake 70
   echo -e "${BOLD}${BLUE}      __     _     __                 __             __  ___               __                 ____                   __   ______    __                    __        ____  "
@@ -133,8 +134,8 @@ retrieve_latest_release() {
     sed -E 's/.*"([^"]+)".*/\1/'                              
 }
 
-retrieve_latest_versions() {
-  log "Retrieving release information..."
+fetch_latest_versions() {
+  inform "Retrieving release information..."
   PTERODACTYL_PANEL_VERSION=$(retrieve_latest_release "ghost-dev-gr/panel")
   PTERODACTYL_WINGS_VERSION=$(retrieve_latest_release "ghost-dev-gr/wings")
 }
