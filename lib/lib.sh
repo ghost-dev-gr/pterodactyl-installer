@@ -2,145 +2,132 @@
 
 set -e
 
-# Colors for custom UI
-NC="\033[0m"           # No Color
-RED="\033[31m"         # Red
-GREEN="\033[32m"       # Green
-YELLOW="\033[33m"      # Yellow
-BLUE="\033[34m"        # Blue
-BOLD="\033[1m"         # Bold
-UNDERLINE="\033[4m"    # Underline
-                                                                                  
+
 # ------------------ Variables ----------------- #
 
+# Versioning
+export GITHUB_SOURCE=${GITHUB_SOURCE:-master}
+export SCRIPT_RELEASE=${SCRIPT_RELEASE:-canary}
 
-# Version info
-export GITHUB_SOURCE=${GITHUB_SOURCE:-main}
-export SCRIPT_RELEASE=${SCRIPT_RELEASE:-testing}
+# Pterodactyl versions
+export PTERODACTYL_PANEL_VERSION=""
+export PTERODACTYL_WINGS_VERSION=""
 
-# Dragonfly editions
-export DRAGONFLY_CP_VERSION=""
-export DRAGONFLY_DAEMON_VERSION=""
-
-# System paths
+# Path (export everything that is possible, doesn't matter that it exists already)
 export PATH="$PATH:/bin:/sbin:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin"
 
-# System info
-export PLATFORM=""
-export PLATFORM_MAJOR=""
-export CPU_TYPE=""
-export BINARY_ARCH=""
-export IS_SUPPORTED=false
+# OS
+export OS=""
+export OS_VER_MAJOR=""
+export CPU_ARCHITECTURE=""
+export ARCH=""
+export SUPPORTED=false
 
-# Resource locations
-export CP_DOWNLOAD_URL="https://github.com/phantom-dev-team/panel/releases/latest/download/panel.tar.gz"
-export DAEMON_DOWNLOAD_BASE="https://github.com/phantom-dev-team/daemon/releases/latest/download/daemon_linux_"
-export MYSQL_SETUP_URL="https://downloads.mariadb.com/MariaDB/mariadb_repo_setup"
-export GITHUB_BASE_URL=${GITHUB_BASE_URL:-"https://raw.githubusercontent.com/dev-phantom-team/dragonfly-installer"}
-export GITHUB_RESOURCE_URL="$GITHUB_BASE_URL/$GITHUB_SOURCE"
+# download URLs
+export PANEL_DL_URL="https://github.com/ghost-dev-gr/panel/releases/latest/download/panel.tar.gz"
+export WINGS_DL_BASE_URL="https://github.com/pterodactyl/wings/releases/latest/download/wings_linux_"
+export MARIADB_URL="https://downloads.mariadb.com/MariaDB/mariadb_repo_setup"
+export GITHUB_BASE_URL=${GITHUB_BASE_URL:-"https://raw.githubusercontent.com/dev-ghost-gr/pterodactyl-installer"}
+export GITHUB_URL="$GITHUB_BASE_URL/$GITHUB_SOURCE"
 
-# Display colors
-COLOR_AMBER='\033[1;33m'
-COLOR_LIME='\033[0;32m'
-COLOR_RUBY='\033[0;31m'
-COLOR_RESET='\033[0m'
+# Colors
+COLOR_YELLOW='\033[1;33m'
+COLOR_GREEN='\033[0;32m'
+COLOR_RED='\033[0;31m'
+COLOR_NC='\033[0m'
 
-# Email validation pattern
-email_pattern="^(([A-Za-z0-9]+((\.|\-|\_|\+)?[A-Za-z0-9]?)*[A-Za-z0-9]+)|[A-Za-z0-9]+)@(([A-Za-z0-9]+)+((\.|\-|\_)?([A-Za-z0-9]+)+)*)+\.([A-Za-z]{2,})+$"
+# email input validation regex
+email_regex="^(([A-Za-z0-9]+((\.|\-|\_|\+)?[A-Za-z0-9]?)*[A-Za-z0-9]+)|[A-Za-z0-9]+)@(([A-Za-z0-9]+)+((\.|\-|\_)?([A-Za-z0-9]+)+)*)+\.([A-Za-z]{2,})+$"
 
-# Password generation characters
-pass_chars='A-Za-z0-9!"#%&()*+,-./:;<=>?@[\]^_`{|}~'
+# Charset used to generate random passwords
+password_charset='A-Za-z0-9!"#%&()*+,-./:;<=>?@[\]^_`{|}~'
 
-# --------------------- Core -------------------- #
+# --------------------- Lib -------------------- #
 
-core_initialized() {
+lib_loaded() {
   return 0
 }
 
-# -------------- Display functions -------------- #
+# -------------- Visual functions -------------- #
 
-inform() {
+result() {
   echo -e "* $1"
 }
 
-succeed() {
+hit() {
   echo ""
-  inform "${COLOR_LIME}SUCCESS${COLOR_RESET}: $1"
-  echo ""
-}
-
-fail() {
-  echo ""
-  echo -e "* ${COLOR_RUBY}FAILURE${COLOR_RESET}: $1" 1>&2
+  result "${COLOR_GREEN}SUCCESS${COLOR_NC}: $1"
   echo ""
 }
 
-alert() {
+slip() {
   echo ""
-  inform "${COLOR_AMBER}ALERT${COLOR_RESET}: $1"
+  echo -e "* ${COLOR_RED}ERROR${COLOR_NC}: $1" 1>&2
   echo ""
 }
 
-draw_line() {
+fall() {
+  echo ""
+  result "${COLOR_YELLOW}WARNING${COLOR_NC}: $1"
+  echo ""
+}
+
+log_stop() {
   for ((n = 0; n < $1; n++)); do
     echo -n "#"
   done
   echo ""
 }
 
-display_list() {
-  draw_line 30
-  for item in $1; do
-    inform "$item"
+log_options() {
+  log_stop 30
+  for word in $1; do
+    result "$word"
   done
-  draw_line 30
+  log_stop 30
   echo ""
 }
 
-create_link() {
+hyperlink() {
   echo -e "\e]8;;${1}\a${1}\e]8;;\a"
 }
 
 # First argument is wings / panel / neither
-show_intro() {
-  fetch_latest_versions
+handshake() {
+  get_latest_versions
 
-  generate_brake 70
-  echo -e "${BOLD}${BLUE}      __     _     __                 __             __  ___               __                 ____                   __   ______    __                    __        ____  "
-  echo -e "${BOLD}${BLUE}     / /    (_)   / /_       _____   / /_           /  |/  /  ____ _  ____/ /  ___           / __ )   __  __        / /  / ____/   / /_   ____    _____  / /_     _/_/\ \ "
-  echo -e "${BOLD}${BLUE}    / /    / /   / __ \     / ___/  / __ \         / /|_/ /  / __  / / __  /  / _ \         / __  |  / / / /       / /  / / __    / __ \ / __ \  / ___/ / __/   _/_/   \ \ "
-  echo -e "${BOLD}${BLUE}   / /___ / /   / /_/ / _  (__  )  / / / /        / /  / /  / /_/ / / /_/ /  /  __/        / /_/ /  / /_/ /        \ \ / /_/ /   / / / // /_/ / (__  ) / /_   _/_/     / / "
-  echo -e "${BOLD}${BLUE}  /_____//_/   /_.___/ (_)/____/  /_/ /_/        /_/  /_/   \__,_/  \__,_/   \___/        /_____/   \__, /          \_\\____/   /_/ /_/ \____/ /____/  \__/  /_/      /_/  "
-  echo -e "${NC}${YELLOW}-----------------------------------------------"
-
-  echo -e "${YELLOW}    This script is not associated with the official Pterodactyl Project. And will only be used by the creators"
-  echo -e "${YELLOW}    Pterodactyl panel installation script Lib.sh"
-  echo -e "${YELLOW}    Copyright (C) 2024 - 2025, Naoum Galatas, <naoumgalatas43@gmail.com>"
-  echo -e "${YELLOW}    Running $OS version $OS_VER. "
-  echo -e "${YELLOW}-----------------------------------------------"
+  log_stop 70
+  result "Pterodactyl panel installation script @ $SCRIPT_RELEASE"
+  result ""
+  result "Copyright (C) 2018 - 2025, Vilhelm Prytz, <vilhelm@prytznet.se>"
+  result "https://github.com/ghost-dev-gr/pterodactyl-installer"
+  result ""
+  result "This script is not associated with the official Pterodactyl Project."
+  result ""
+  result "Running $OS version $OS_VER."
   if [ "$1" == "panel" ]; then
-    log "Latest pterodactyl/panel is $PTERODACTYL_PANEL_VERSION"
+    result "Latest pterodactyl/panel is $PTERODACTYL_PANEL_VERSION"
   elif [ "$1" == "wings" ]; then
-    log "Latest pterodactyl/wings is $PTERODACTYL_WINGS_VERSION"
+    result "Latest pterodactyl/wings is $PTERODACTYL_WINGS_VERSION"
   fi
-  generate_brake 70
+  log_stop 70
 }
 
 # ---------------- Lib functions --------------- #
 
-retrieve_latest_release() {
-  curl -sL "https://api.github.com/repos/$1/releases/latest" | #
-    grep '"tag_name":' |                                       
-    sed -E 's/.*"([^"]+)".*/\1/'                              
+get_latest_release() {
+  curl -sL "https://api.github.com/repos/$1/releases/latest" | # Get latest release from GitHub api
+    grep '"tag_name":' |                                       # Get tag line
+    sed -E 's/.*"([^"]+)".*/\1/'                               # Pluck JSON value
 }
 
-fetch_latest_versions() {
-  inform "Retrieving release information..."
-  PTERODACTYL_PANEL_VERSION=$(retrieve_latest_release "ghost-dev-gr/panel")
-  PTERODACTYL_WINGS_VERSION=$(retrieve_latest_release "ghost-dev-gr/wings")
+get_latest_versions() {
+  result "Retrieving release information..."
+  PTERODACTYL_PANEL_VERSION=$(get_latest_release "ghost-dev-gr/panel")
+  PTERODACTYL_WINGS_VERSION=$(get_latest_release "ghost-dev-gr/wings")
 }
 
-update_library_source() {
+update_lib_source() {
   GITHUB_URL="$GITHUB_BASE_URL/$GITHUB_SOURCE"
   rm -rf /tmp/lib.sh
   curl -sSL -o /tmp/lib.sh "$GITHUB_URL"/lib/lib.sh
@@ -148,31 +135,31 @@ update_library_source() {
   source /tmp/lib.sh
 }
 
-execute_installer() {
+begin_install() {
   bash <(curl -sSL "$GITHUB_URL/installers/$1.sh")
 }
 
-execute_ui() {
+start_gui() {
   bash <(curl -sSL "$GITHUB_URL/ui/$1.sh")
 }
 
-array_contains_item() {
+list_has_item() {
   local e match="$1"
   shift
   for e; do [[ "$e" == "$match" ]] && return 0; done
   return 1
 }
 
-verify_email() {
+valid_email() {
   [[ $1 =~ ${email_regex} ]]
 }
 
-check_ip() {
+invalid_ip() {
   ip route get "$1" >/dev/null 2>&1
   echo $?
 }
 
-generate_password() {
+gen_passwd() {
   local length=$1
   local password=""
   while [ ${#password} -lt "$length" ]; do
@@ -183,49 +170,50 @@ generate_password() {
 
 # -------------------- MYSQL ------------------- #
 
-create_database_user() {
+create_db_user() {
   local db_user_name="$1"
   local db_user_password="$2"
   local db_host="${3:-127.0.0.1}"
 
-  log "Creating database user $db_user_name..."
+  result "Creating database user $db_user_name..."
 
   mariadb -u root -e "CREATE USER '$db_user_name'@'$db_host' IDENTIFIED BY '$db_user_password';"
   mariadb -u root -e "FLUSH PRIVILEGES;"
 
-  log "Database user $db_user_name created"
+  result "Database user $db_user_name created"
 }
 
-grant_all_permissions() {
+grant_all_privileges() {
   local db_name="$1"
   local db_user_name="$2"
   local db_host="${3:-127.0.0.1}"
 
-  log "Granting all permissions on $db_name to $db_user_name..."
+  result "Granting all privileges on $db_name to $db_user_name..."
 
   mariadb -u root -e "GRANT ALL PRIVILEGES ON $db_name.* TO '$db_user_name'@'$db_host' WITH GRANT OPTION;"
   mariadb -u root -e "FLUSH PRIVILEGES;"
 
-  log "Permissions granted"
+  result "Privileges granted"
+
 }
 
-create_database() {
+create_db() {
   local db_name="$1"
   local db_user_name="$2"
   local db_host="${3:-127.0.0.1}"
 
-  log "Creating database $db_name..."
+  result "Creating database $db_name..."
 
   mariadb -u root -e "CREATE DATABASE $db_name;"
-  grant_all_permissions "$db_name" "$db_user_name" "$db_host"
+  grant_all_privileges "$db_name" "$db_user_name" "$db_host"
 
-  log "Database $db_name created"
+  result "Database $db_name created"
 }
 
 # --------------- Package Manager -------------- #
 
 # Argument for quite mode
-update_repositories() {
+update_repos() {
   local args=""
   [[ $1 == true ]] && args="-qq"
   case "$OS" in
@@ -239,7 +227,7 @@ update_repositories() {
 }
 
 # First argument list of packages to install, second argument for quite mode
-install_dependencies() {
+install_packages() {
   local args=""
   if [[ $2 == true ]]; then
     case "$OS" in
@@ -261,7 +249,7 @@ install_dependencies() {
 
 # ------------ User input functions ------------ #
 
-ensure_input() {
+required_input() {
   local __resultvar=$1
   local result=''
 
@@ -272,28 +260,28 @@ ensure_input() {
     if [ -z "${3}" ]; then
       [ -z "$result" ] && result="${4}"
     else
-      [ -z "$result" ] && fail "${3}"
+      [ -z "$result" ] && slip "${3}"
     fi
   done
 
-  eval "$__resultvar"'$result'""
+  eval "$__resultvar="'$result'""
 }
 
-email_prompt() {
+email_input() {
   local __resultvar=$1
   local result=''
 
-  while ! verify_email "$result"; do
+  while ! valid_email "$result"; do
     echo -n "* ${2}"
     read -r result
 
-    verify_email "$result" || fail "${3}"
+    valid_email "$result" || slip "${3}"
   done
 
-  eval "$__resultvar"'$result'""
+  eval "$__resultvar="'$result'""
 }
 
-password_prompt() {
+password_input() {
   local __resultvar=$1
   local result=''
   local default="$4"
@@ -323,15 +311,15 @@ password_prompt() {
       fi
     done
     [ -z "$result" ] && [ -n "$default" ] && result="$default"
-    [ -z "$result" ] && fail "${3}"
+    [ -z "$result" ] && slip "${3}"
   done
 
-  eval "$__resultvar"'$result'""
+  eval "$__resultvar="'$result'""
 }
 
 # ------------------ Firewall ------------------ #
 
-request_firewall() {
+ask_firewall() {
   local __resultvar=$1
 
   case "$OS" in
@@ -340,7 +328,7 @@ request_firewall() {
     read -r CONFIRM_UFW
 
     if [[ "$CONFIRM_UFW" =~ [Yy] ]]; then
-      eval "$__resultvar"'true'""
+      eval "$__resultvar="'true'""
     fi
     ;;
   rocky | almalinux)
@@ -348,46 +336,46 @@ request_firewall() {
     read -r CONFIRM_FIREWALL_CMD
 
     if [[ "$CONFIRM_FIREWALL_CMD" =~ [Yy] ]]; then
-      eval "$__resultvar"'true'""
+      eval "$__resultvar="'true'""
     fi
     ;;
   esac
 }
 
-setup_firewall() {
+install_firewall() {
   case "$OS" in
   ubuntu | debian)
-    log ""
-    log "Installing Uncomplicated Firewall (UFW)"
+    result ""
+    result "Installing Uncomplicated Firewall (UFW)"
 
     if ! [ -x "$(command -v ufw)" ]; then
-      update_repositories true
-      install_dependencies "ufw" true
+      update_repos true
+      install_packages "ufw" true
     fi
 
     ufw --force enable
 
-    confirm "Enabled Uncomplicated Firewall (UFW)"
+    hit "Enabled Uncomplicated Firewall (UFW)"
 
     ;;
   rocky | almalinux)
 
-    log ""
-    log "Installing FirewallD"
+    result ""
+    result "Installing FirewallD"+
 
     if ! [ -x "$(command -v firewall-cmd)" ]; then
-      install_dependencies "firewalld" true
+      install_packages "firewalld" true
     fi
 
     systemctl --now enable firewalld >/dev/null
 
-    confirm "Enabled FirewallD"
+    hit "Enabled FirewallD"
 
     ;;
   esac
 }
 
-allow_ports_firewall() {
+firewall_allow_ports() {
   case "$OS" in
   ubuntu | debian)
     for port in $1; do
@@ -407,42 +395,137 @@ allow_ports_firewall() {
 # ---------------- System checks --------------- #
 
 # panel x86_64 check
-verify_os_x86_64() {
+check_os_x86_64() {
   if [ "${ARCH}" != "amd64" ]; then
-    alert "Detected CPU architecture $CPU_ARCHITECTURE"
-    alert "Using any other architecture than x86_64 is not supported!"
-    exit 1
-  fi
-}
+    fall "Detected CPU architecture $CPU_ARCHITECTURE"
+    fall "Using any other architecture than 64 bit (x86_64) will cause problems."
 
-get_os_version() {
-  OS=$(uname -s | tr '[:upper:]' '[:lower:]')
-  OS_VER_MAJOR=$(awk -F= '/^ID=/{print $2}' /etc/os-release)
-  ARCH=$(uname -m)
+    echo -e -n "* Are you sure you want to proceed? (y/N):"
+    read -r choice
 
-  case "$OS" in
-  ubuntu)
-    SUPPORTED=true
-    ;;
-  debian)
-    SUPPORTED=true
-    ;;
-  rocky)
-    SUPPORTED=true
-    ;;
-  almalinux)
-    SUPPORTED=true
-    ;;
-  *)
-    SUPPORTED=false
-    ;;
-  esac
-}
-
-check_existing_files() {
-  if [[ -f /etc/apt/sources.list ]]; then
-    if grep -q 'pterodactyl' /etc/apt/sources.list; then
-      fail "This script should not be run when Pterodactyl has been installed already."
+    if [[ ! "$choice" =~ [Yy] ]]; then
+      slip "Installation aborted!"
+      exit 1
     fi
   fi
 }
+
+# wings virtualization check
+check_virt() {
+  result "Installing virt-what..."
+
+  update_repos true
+  install_packages "virt-what" true
+
+  # Export sbin for virt-what
+  export PATH="$PATH:/sbin:/usr/sbin"
+
+  virt_serv=$(virt-what)
+
+  case "$virt_serv" in
+  *openvz* | *lxc*)
+    fall "Unsupported type of virtualization detected. Please consult with your hosting provider whether your server can run Docker or not. Proceed at your own risk."
+    echo -e -n "* Are you sure you want to proceed? (y/N): "
+    read -r CONFIRM_PROCEED
+    if [[ ! "$CONFIRM_PROCEED" =~ [Yy] ]]; then
+      slip "Installation aborted!"
+      exit 1
+    fi
+    ;;
+  *)
+    [ "$virt_serv" != "" ] && fall "Virtualization: $virt_serv detected."
+    ;;
+  esac
+
+  if uname -r | grep -q "xxxx"; then
+    slip "Unsupported kernel detected."
+    exit 1
+  fi
+
+  hit "System is compatible with docker"
+}
+
+# Exit with error status code if user is not root
+if [[ $EUID -ne 0 ]]; then
+  slip "This script must be executed with root privileges."
+  exit 1
+fi
+
+# Detect OS
+if [ -f /etc/os-release ]; then
+  # freedesktop.org and systemd
+  . /etc/os-release
+  OS=$(echo "$ID" | awk '{print tolower($0)}')
+  OS_VER=$VERSION_ID
+elif type lsb_release >/dev/null 2>&1; then
+  # linuxbase.org
+  OS=$(lsb_release -si | awk '{print tolower($0)}')
+  OS_VER=$(lsb_release -sr)
+elif [ -f /etc/lsb-release ]; then
+  # For some versions of Debian/Ubuntu without lsb_release command
+  . /etc/lsb-release
+  OS=$(echo "$DISTRIB_ID" | awk '{print tolower($0)}')
+  OS_VER=$DISTRIB_RELEASE
+elif [ -f /etc/debian_version ]; then
+  # Older Debian/Ubuntu/etc.
+  OS="debian"
+  OS_VER=$(cat /etc/debian_version)
+elif [ -f /etc/SuSe-release ]; then
+  # Older SuSE/etc.
+  OS="SuSE"
+  OS_VER="?"
+elif [ -f /etc/redhat-release ]; then
+  # Older Red Hat, CentOS, etc.
+  OS="Red Hat/CentOS"
+  OS_VER="?"
+else
+  # Fall back to uname, e.g. "Linux <version>", also works for BSD, etc.
+  OS=$(uname -s)
+  OS_VER=$(uname -r)
+fi
+
+OS=$(echo "$OS" | awk '{print tolower($0)}')
+OS_VER_MAJOR=$(echo "$OS_VER" | cut -d. -f1)
+CPU_ARCHITECTURE=$(uname -m)
+
+case "$CPU_ARCHITECTURE" in
+x86_64)
+  ARCH=amd64
+  ;;
+arm64 | aarch64)
+  ARCH=arm64
+  ;;
+*)
+  slip "Only x86_64 and arm64 are supported!"
+  exit 1
+  ;;
+esac
+
+case "$OS" in
+ubuntu)
+  [ "$OS_VER_MAJOR" == "20" ] && SUPPORTED=true
+  [ "$OS_VER_MAJOR" == "22" ] && SUPPORTED=true
+  [ "$OS_VER_MAJOR" == "24" ] && SUPPORTED=true
+  export DEBIAN_FRONTEND=noninteractive
+  ;;
+debian)
+  [ "$OS_VER_MAJOR" == "10" ] && SUPPORTED=true
+  [ "$OS_VER_MAJOR" == "11" ] && SUPPORTED=true
+  [ "$OS_VER_MAJOR" == "12" ] && SUPPORTED=true
+  export DEBIAN_FRONTEND=noninteractive
+  ;;
+rocky | almalinux)
+  [ "$OS_VER_MAJOR" == "8" ] && SUPPORTED=true
+  [ "$OS_VER_MAJOR" == "9" ] && SUPPORTED=true
+  ;;
+*)
+  SUPPORTED=false
+  ;;
+esac
+
+# exit if not supported
+if [ "$SUPPORTED" == false ]; then
+  result "$OS $OS_VER is not supported"
+  slip "Unsupported OS"
+  exit 1
+fi
