@@ -1,110 +1,91 @@
 #!/bin/bash
 
-# Colors for custom UI
-NC="\033[0m"           # No Color
-RED="\033[31m"         # Red
-GREEN="\033[32m"       # Green
-YELLOW="\033[33m"      # Yellow
-BLUE="\033[34m"        # Blue
-BOLD="\033[1m"         # Bold
-UNDERLINE="\033[4m"    # Underline
-                                                                                  
+set -e
 
-# Custom ASCII Art
-clear
-echo -e "${BOLD}${BLUE}     ___  ________      ___  ___      ________      ________       _________         ___  ___   "
-echo -e "${BOLD}${BLUE}    /  /||\   ____\    |\  \|\  \    |\   __  \    |\   ____\     |\___   ___\      /  /||\  \ "
-echo -e "${BOLD}${BLUE}   /  / /\ \  \___|    \ \  \\\  \   \ \  \|\  \   \ \  \___|_    \|___ \  \_|     /  // \ \  \ "
-echo -e "${BOLD}${BLUE}  /  / /  \ \  \  ___   \ \   __  \   \ \  \\\  \   \ \_____  \        \ \  \     /  //   \ \  \ "
-echo -e "${BOLD}${BLUE}  |\  \/    \ \  \|\  \   \ \  \ \  \   \ \  \\\  \   \|____|\  \        \ \  \   /  //     \/  /| "
-echo -e "${BOLD}${BLUE}  \ \  \     \ \_______\   \ \__\ \__\   \ \_______\    ____\_\  \        \ \__\ /_ //      /  // "
-echo -e "${BOLD}${BLUE}   \ \__\     \|_______|    \|__|\|__|    \|_______|   |\_________\        \|__||__|/      /_ //"
-echo -e "${BOLD}${BLUE}    \|__|                                              \|_________|                       |__|/ "
-echo -e "${NC}${RED}-----------------------------------------------"
-echo -e "${YELLOW}     Welcome to the Custom Pterodactyl Installer ${NC}"
-echo -e "${RED}-----------------------------------------------"
 
 export GITHUB_SOURCE="v1.1.1"
 export SCRIPT_RELEASE="v1.1.1"
-export GITHUB_BASE_URL="https://raw.githubusercontent.com/phantom-dev-team/dragonfly-installer"
+export GITHUB_BASE_URL="https://raw.githubusercontent.com/ghost-dev-gr/pterodactyl-installer"
 
-RECORD_FILE="/var/log/dragonfly-setup.log"
+EXPORT_LOGS="/var/log/pterodactyl-installer.log"
 
 # check for curl
 if ! [ -x "$(command -v curl)" ]; then
-  notify "* curl is needed for this setup to operate."
-  notify "* install via apt (Debian/Ubuntu) or yum/dnf (RHEL)"
+  echo "* curl is required in order for this script to work."
+  echo "* install using apt (Debian and derivatives) or yum/dnf (CentOS)"
   exit 1
 fi
 
-# Remove previous helper file if present
-[ -f /tmp/helper.sh ] && rm -rf /tmp/helper.sh
-curl -sSL -o /tmp/helper.sh "$GITHUB_BASE_URL"/master/lib/helper.sh
-# shellcheck source=lib/helper.sh
-source /tmp/helper.sh
+# Always remove lib.sh, before downloading it
+[ -f /tmp/lib.sh ] && rm -rf /tmp/lib.sh
+curl -sSL -o /tmp/lib.sh "$GITHUB_BASE_URL"/master/lib/lib.sh
+# shellcheck source=lib/lib.sh
+source /tmp/lib.sh
 
-launch_process() {
-  echo -e "\n\n* dragonfly-installer $(date) \n\n" >>$RECORD_FILE
+perfrom() {
+  echo -e "\n\n* pterodactyl-installer $(date) \n\n" >>$EXPORT_LOGS="/var/log/pterodactyl-installer.log"
 
-  [[ "$1" == *"testing"* ]] && export GITHUB_SOURCE="main" && export SCRIPT_RELEASE="testing"
-  refresh_helper_source
-  start_interface "${1//_testing/}" |& tee -a $RECORD_FILE
+
+  [[ "$1" == *"canary"* ]] && export GITHUB_SOURCE="master" && export SCRIPT_RELEASE="canary"
+  update_lib_source
+  start_gui "${1//_canary/}" |& tee -a $EXPORT_LOGS="/var/log/pterodactyl-installer.log"
+
 
   if [[ -n $2 ]]; then
-    echo -e -n "* Setup of $1 done. Continue with $2 setup? (y/N): "
-    read -r REPLY
-    if [[ "$REPLY" =~ [Yy] ]]; then
-      launch_process "$2"
+    echo -e -n "* Installation of $1 completed. Do you want to proceed to $2 installation? (y/N): "
+    read -r CONFIRM
+    if [[ "$CONFIRM" =~ [Yy] ]]; then
+      perform "$2"
     else
-      fail "Setup of $2 cancelled."
+      slip "Installation of $2 aborted."
       exit 1
     fi
   fi
 }
 
-display_intro ""
+handshake ""
 
-completed=no
-while [ "$completed" == no ]; do
-  selections=(
-    "Setup the control panel"
-    "Setup the daemon"
-    "Setup both [0] and [1] on this system (daemon setup runs post panel)"
-    # "Remove panel or daemon\n"
+done=false
+while [ "$done" == false ]; do
+  options=(
+    "Install the panel"
+    "Install Wings"
+    "Install both [0] and [1] on the same machine (wings script runs after panel)"
+    # "Uninstall panel or wings\n"
 
-    "Setup panel using testing edition of this setup (unstable, may contain issues!)"
-    "Setup daemon using testing edition of this setup (unstable, may contain issues!)"
-    "Setup both [3] and [4] on this system (daemon setup runs post panel)"
-    "Remove panel or daemon with testing edition of this setup (unstable, may contain issues!)"
+    "Install panel with canary version of the script (the versions that lives in master, may be broken!)"
+    "Install Wings with canary version of the script (the versions that lives in master, may be broken!)"
+    "Install both [3] and [4] on the same machine (wings script runs after panel)"
+    "Uninstall panel or wings with canary version of the script (the versions that lives in master, may be broken!)"
   )
 
-  operations=(
-    "controlpanel"
-    "daemon"
-    "controlpanel;daemon"
-    # "remove"
+  actions=(
+    "panel"
+    "wings"
+    "panel;wings"
+    # "uninstall"
 
-    "controlpanel_testing"
-    "daemon_testing"
-    "controlpanel_testing;daemon_testing"
-    "remove_testing"
+    "panel_canary"
+    "wings_canary"
+    "panel_canary;wings_canary"
+    "uninstall_canary"
   )
 
-  inform "What operation should we perform?"
+  result "What would you like to do?"
 
-  for idx in "${!selections[@]}"; do
-    inform "[$idx] ${selections[$idx]}"
+  for i in "${!options[@]}"; do
+    result "[$i] ${options[$i]}"
   done
 
-  echo -n "* Choose 0-$((${#operations[@]} - 1)): "
-  read -r choice
+  echo -n "* Input 0-$((${#actions[@]} - 1)): "
+  read -r action
 
-  [ -z "$choice" ] && fail "Selection required" && continue
+  [ -z "$action" ] && slip "Input is required" && continue
 
-  valid_choices=("$(for ((i = 0; i <= ${#operations[@]} - 1; i += 1)); do echo "${i}"; done)")
-  [[ ! " ${valid_choices[*]} " =~ ${choice} ]] && fail "Invalid selection"
-  [[ " ${valid_choices[*]} " =~ ${choice} ]] && completed=yes && IFS=";" read -r op1 op2 <<<"${operations[$choice]}" && launch_process "$op1" "$op2"
+  valid_input=("$(for ((i = 0; i <= ${#actions[@]} - 1; i += 1)); do echo "${i}"; done)")
+  [[ ! " ${valid_input[*]} " =~ ${action} ]] && slip "Invalid option"
+  [[ " ${valid_input[*]} " =~ ${action} ]] && done=true && IFS=";" read -r i1 i2 <<<"${actions[$action]}" && execute "$i1" "$i2"
 done
 
-# Cleanup helper file
-rm -rf /tmp/helper.sh
+# Remove lib.sh, so next time the script is run the, newest version is downloaded.
+rm -rf /tmp/lib.sh
