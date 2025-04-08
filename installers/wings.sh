@@ -152,7 +152,7 @@ MYSQL_DBHOST_USER="${MYSQL_DBHOST_USER:-pterodactyluser}"
 MYSQL_DBHOST_PASSWORD="${MYSQL_DBHOST_PASSWORD:-}"
 
 if [[ $CONFIGURE_DBHOST == true && -z "${MYSQL_DBHOST_PASSWORD}" ]]; then
-  error "Mysql database host user password is required"
+  slip "Mysql database host user password is required"
   exit 1
 fi
 
@@ -166,7 +166,7 @@ enable_services() {
 }
 
 dep_install() {
-  log "Installing dependencies for $OS $OS_VER..."
+  result "Installing dependencies for $OS $OS_VER..."
 
   [ "$CONFIGURE_FIREWALL" == true ] && install_firewall && firewall_ports
 
@@ -204,7 +204,7 @@ dep_install() {
 
   enable_services
 
-  confirm "Dependencies installed!"
+  hit "Dependencies installed!"
 }
 
 ptdl_dl() {
@@ -215,11 +215,11 @@ ptdl_dl() {
 
   chmod u+x /usr/local/bin/wings
 
-  confirm "Pterodactyl Wings downloaded successfully"
+  hit "Pterodactyl Wings downloaded successfully"
 }
 
 install_golang() {
-  log "Installing Go 1.22.1..."
+  result "Installing Go 1.22.1..."
   wget https://go.dev/dl/go1.22.1.linux-amd64.tar.gz -O /tmp/go.tar.gz
   rm -rf /usr/local/go
   tar -C /usr/local -xzf /tmp/go.tar.gz
@@ -228,35 +228,35 @@ install_golang() {
 }
 
 systemd_file() {
-  log "Installing systemd service.."
+  result "Installing systemd service.."
 
   curl -o /etc/systemd/system/wings.service "$GITHUB_URL"/configs/wings.service
   systemctl daemon-reload
   systemctl enable wings
 
-  confirm "Installed systemd service!"
+  hit "Installed systemd service!"
 }
 
 firewall_ports() {
-  log "Opening port 22 (SSH), 8080 (Wings Port), 2022 (Wings SFTP Port)"
+  result "Opening port 22 (SSH), 8080 (Wings Port), 2022 (Wings SFTP Port)"
 
   [ "$CONFIGURE_LETSENCRYPT" == true ] && firewall_allow_ports "80 443"
   [ "$CONFIGURE_DB_FIREWALL" == true ] && firewall_allow_ports "3306"
 
   firewall_allow_ports "22"
-  log "Allowed port 22"
+  result "Allowed port 22"
   firewall_allow_ports "8080"
-  log "Allowed port 8080"
+  result "Allowed port 8080"
   firewall_allow_ports "2022"
-  log "Allowed port 2022"
+  result "Allowed port 2022"
 
-  confirm "Firewall ports opened!"
+  hit "Firewall ports opened!"
 }
 
 letsencrypt() {
   FAILED=false
 
-  log "Configuring LetsEncrypt.."
+  result "Configuring LetsEncrypt.."
 
   # If user has nginx
   systemctl stop nginx || true
@@ -268,14 +268,14 @@ letsencrypt() {
 
   # Check if it succeded
   if [ ! -d "/etc/letsencrypt/live/$FQDN/" ] || [ "$FAILED" == true ]; then
-    warning "The process of obtaining a Let's Encrypt certificate failed!"
+    fall "The process of obtaining a Let's Encrypt certificate failed!"
   else
-    confirm "The process of obtaining a Let's Encrypt certificate succeeded!"
+    hit "The process of obtaining a Let's Encrypt certificate succeeded!"
   fi
 }
 
 configure_mysql() {
-  log "Configuring MySQL.."
+  result "Configuring MySQL.."
 
   create_db_user "$MYSQL_DBHOST_USER" "$MYSQL_DBHOST_PASSWORD" "$MYSQL_DBHOST_HOST"
   grant_all_privileges "*" "$MYSQL_DBHOST_USER" "$MYSQL_DBHOST_HOST"
@@ -295,13 +295,13 @@ configure_mysql() {
     systemctl restart mysqld
   fi
 
-  confirm "MySQL configured!"
+  hit "MySQL configured!"
 }
 
 # --------------- Main functions --------------- #
 
 perform_install() {
-  log "Installing pterodactyl wings.."
+  result "Installing pterodactyl wings.."
   dep_install
   
   install_golang
@@ -317,75 +317,75 @@ perform_install() {
   mkdir -p /srv/server_certs
   chmod 700 /srv/server_certs
   
-  log "Downloading srv wings"
+  result "Downloading srv wings"
 
   # Set the installation directory
   INSTALL_DIR="/srv/wings"
   
   # Ensure the directory exists
-  mkdir -p "$INSTALL_DIR" || { error "Failed to create $INSTALL_DIR"; return 1; }
-  cd "$INSTALL_DIR" || { error "Failed to navigate to $INSTALL_DIR"; return 1; }
+  mkdir -p "$INSTALL_DIR" || { slip "Failed to create $INSTALL_DIR"; return 1; }
+  cd "$INSTALL_DIR" || { slip "Failed to navigate to $INSTALL_DIR"; return 1; }
 
   LOCATION=$(curl -s https://api.github.com/repos/pterodactyl/wings/releases/latest \
     | grep "tag_name" \
     | awk -F '"' '{print "https://github.com/pterodactyl/wings/archive/" $4 ".zip"}')
 
   if [ -z "$LOCATION" ]; then
-    error "Failed to fetch the latest Wings release URL."
+    slip "Failed to fetch the latest Wings release URL."
     return 1
   fi
 
-  curl -L -o wings_latest.zip "$LOCATION" || { error "Failed to download Wings"; return 1; }
-  unzip -o wings_latest.zip || { error "Failed to unzip Wings"; return 1; }
+  curl -L -o wings_latest.zip "$LOCATION" || { slip "Failed to download Wings"; return 1; }
+  unzip -o wings_latest.zip || { slip "Failed to unzip Wings"; return 1; }
 
   # Find the extracted folder (should match wings-* format)
   EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "wings-*" | head -n 1)
   
   if [ -z "$EXTRACTED_DIR" ]; then
-    error "Failed to find extracted Wings folder."
+    slip "Failed to find extracted Wings folder."
     return 1
   fi
 
-  log "Moving files from $EXTRACTED_DIR to /srv/wings..."
-  cp -r "$EXTRACTED_DIR"/* /srv/wings/ || { error "Failed to move files"; return 1; }
-  confirm "Files moved successfully!"
+  result "Moving files from $EXTRACTED_DIR to /srv/wings..."
+  cp -r "$EXTRACTED_DIR"/* /srv/wings/ || { slip "Failed to move files"; return 1; }
+  hit "Files moved successfully!"
   
  # Move router_server_proxy.go from the installer directory to the /srv/wings/router/ directory
   echo "=> Moving router_server_proxy.go from /root/pterodactyl-installer/installers to /srv/wings/router/"
 
   # Ensure the destination directory exists
-  mkdir -p /srv/wings/router || { error "Failed to create /srv/wings/router"; return 1; }
+  mkdir -p /srv/wings/router || { slip "Failed to create /srv/wings/router"; return 1; }
 
   # Move the file and check if it was successful
-  mv /root/pterodactyl-installer/installers/router_server_proxy.go /srv/wings/router/ || { error "Failed to move router_server_proxy.go to /srv/wings/router/"; exit 1; }
+  mv /root/pterodactyl-installer/installers/router_server_proxy.go /srv/wings/router/ || { slip "Failed to move router_server_proxy.go to /srv/wings/router/"; exit 1; }
 
-  confirm "Custom proxy routes moved successfully!"
+  hit "Custom proxy routes moved successfully!"
 
 
   
   # Add proxy endpoints to router.go
-  log "Adding proxy endpoints to router..."
+  result "Adding proxy endpoints to router..."
   ROUTER_FILE="/srv/wings/router/router.go"
   if [ -f "$ROUTER_FILE" ]; then
     sed -i '/server.POST("\/ws\/deny", postServerDenyWSTokens)/a \
         server.POST("\/proxy\/create", postServerProxyCreate)\
         server.POST("\/proxy\/delete", postServerProxyDelete)' "$ROUTER_FILE"
-    confirm "Proxy endpoints added to router"
+    hit "Proxy endpoints added to router"
   else
-    warning "Router file not found at $ROUTER_FILE - proxy endpoints not added"
+    wafallrning "Router file not found at $ROUTER_FILE - proxy endpoints not added"
   fi
 
 
   # Stop, rebuild, and restart Wings
   cd /srv/wings
-  systemctl stop wings || warning "Failed to stop Wings, continuing..."
-  go get github.com/go-acme/lego/v4 || { error "Go get failed"; return 1; }
-  go mod tidy || { error "Go mod tidy failed"; return 1; }
-  go build -o /usr/local/bin/wings || { error "Go build failed"; return 1; }
-  chmod +x /usr/local/bin/wings || { error "Failed to set executable permissions"; return 1; }
-  systemctl start wings || { error "Failed to start Wings"; return 1; }
+  systemctl stop wings || fall "Failed to stop Wings, continuing..."
+  go get github.com/go-acme/lego/v4 || { slip "Go get failed"; return 1; }
+  go mod tidy || { slip "Go mod tidy failed"; return 1; }
+  go build -o /usr/local/bin/wings || { slip "Go build failed"; return 1; }
+  chmod +x /usr/local/bin/wings || { slip "Failed to set executable permissions"; return 1; }
+  systemctl start wings || { slip "Failed to start Wings"; return 1; }
 
-  confirm "Wings installation and update completed successfully!"
+  hit "Wings installation and update completed successfully!"
   return 0
 }
 
