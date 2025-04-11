@@ -106,7 +106,7 @@ while [ "$done" == false ]; do
   # Execute the chosen action
   done=true
   IFS=";" read -r i1 i2 <<<"${actions[$action]}"
-  execute "$i1" "$i2"
+  run "$i1" "$i2"
 done
 
 # Clean up lib.sh after use
