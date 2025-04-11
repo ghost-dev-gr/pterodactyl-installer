@@ -285,39 +285,7 @@ export CONFIGURE_LETSENCRYPT=false
 export CONFIGURE_FIREWALL=false
 
 
-# Colors
-COLOR_YELLOW='\033[1;33m'
-COLOR_GREEN='\033[0;32m'
-COLOR_RED='\033[0;31m'
-COLOR_NC='\033[0m'
-COLOR_BOLD='\033[1m'
 
-                                              
-
-# ------------ Greet Message ------------ #
-greet() {
-   retrieve_latest_versions
-  generate_brake 70
-  echo -e "${BOLD}${YELLOW}  ________                   ______       ______       ______  ___      _________          ________             _________________              ________________    "
-  echo -e "${BOLD}${YELLOW}  ___  __ \_____ _______________  /__________  /_      ___   |/  /_____ ______  /____      ___  __ )____  __    _  /_  ____/__  /________________  /______/_/_ \  "
-  echo -e "${BOLD}${YELLOW}  __  /_/ /  __ \/_  __ \  _ \_  / __  ___/_  __ \     __  /|_/ /_  __ \/  __  /_  _ \     __  __  |_  / / /    / /_  / __ __  __ \  __ \_  ___/  __/___/_/ ___ \ "
-  echo -e "${BOLD}${YELLOW}  _  ____// /_/ /_  / / /  __/  /___(__  )_  / / /     _  /  / / / /_/ // /_/ / /  __/     _  /_/ /_  /_/ /     \ \/ /_/ / _  / / / /_/ /(__  )/ /_ __/_/   __  / "
-  echo -e "${BOLD}${YELLOW}  /_/     \__,_/ /_/ /_/\___//_/_(_)____/ /_/ /_/      /_/  /_/  \__,_/ \__,_/  \___/      /_____/ _\__, /       \_\____/  /_/ /_/\____//____/ \__/ /_/     _/_/  "
-  echo -e "${BOLD}${YELLOW}                                                                                                  /____/           "
-  echo -e "${NC}${RED}-----------------------------------------------"
-
-  echo -e "${YELLOW}    This script is not associated with the official Pterodactyl Project. And will only be used by the creators"
-  echo -e "${YELLOW}    Pterodactyl panel installation script Lib.sh"
-  echo -e "${YELLOW}    Copyright (C) 2024 - 2025, Naoum Galatas, <naoumgalatas43@gmail.com>"
-  echo -e "${YELLOW}    Running $OS version $OS_VER. "
-  echo -e "${RED}-----------------------------------------------"
-  if [ "$1" == "panel" ]; then
-    log "Latest pterodactyl/panel is $PTERODACTYL_PANEL_VERSION"
-  elif [ "$1" == "wings" ]; then
-    log "Latest pterodactyl/wings is $PTERODACTYL_WINGS_VERSION"
-  fi
-  generate_brake 70
-}
 # ------------ User input functions ------------ #
 
 request_certificate() {
