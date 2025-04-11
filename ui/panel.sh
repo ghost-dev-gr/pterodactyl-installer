@@ -2,38 +2,12 @@
 
 set -e
 
-######################################################################################
-#                                                                                    #
-# Project 'pterodactyl-installer'                                                    #
-#                                                                                    #
-# Copyright (C) 2018 - 2025, Vilhelm Prytz, <vilhelm@prytznet.se>                    #
-#                                                                                    #
-#   This program is free software: you can redistribute it and/or modify             #
-#   it under the terms of the GNU General Public License as published by             #
-#   the Free Software Foundation, either version 3 of the License, or                #
-#   (at your option) any later version.                                              #
-#                                                                                    #
-#   This program is distributed in the hope that it will be useful,                  #
-#   but WITHOUT ANY WARRANTY; without even the implied warranty of                   #
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                    #
-#   GNU General Public License for more details.                                     #
-#                                                                                    #
-#   You should have received a copy of the GNU General Public License                #
-#   along with this program.  If not, see <https://www.gnu.org/licenses/>.           #
-#                                                                                    #
-# https://github.com/pterodactyl-installer/pterodactyl-installer/blob/master/LICENSE #
-#                                                                                    #
-# This script is not associated with the official Pterodactyl Project.               #
-# https://github.com/pterodactyl-installer/pterodactyl-installer                     #
-#                                                                                    #
-######################################################################################
-
 # Check if script is loaded, load if not or fail otherwise.
 fn_exists() { declare -F "$1" >/dev/null; }
 if ! fn_exists lib_loaded; then
   # shellcheck source=lib/lib.sh
   source /tmp/lib.sh || source <(curl -sSL "$GITHUB_BASE_URL/$GITHUB_SOURCE"/lib/lib.sh)
-  ! fn_exists lib_loaded && echo "* ERROR: Could not load lib script" && exit 1
+  ! fn_exists lib_loaded && echo "* FAIL: Could not load lib script" && exit 1
 fi
 
 # ------------------ Variables ----------------- #
@@ -64,14 +38,48 @@ export CONFIGURE_LETSENCRYPT=false
 # Firewall
 export CONFIGURE_FIREWALL=false
 
+
+# Colors
+COLOR_YELLOW='\033[1;33m'
+COLOR_GREEN='\033[0;32m'
+COLOR_RED='\033[0;31m'
+COLOR_NC='\033[0m'
+COLOR_BOLD='\033[1m'
+
+                                              
+
+# ------------ Greet Message ------------ #
+greet() {
+   retrieve_latest_versions
+  generate_brake 70
+  echo -e "${BOLD}${YELLOW}  ________                   ______       ______       ______  ___      _________          ________             _________________              ________________    "
+  echo -e "${BOLD}${YELLOW}  ___  __ \_____ _______________  /__________  /_      ___   |/  /_____ ______  /____      ___  __ )____  __    _  /_  ____/__  /________________  /______/_/_ \  "
+  echo -e "${BOLD}${YELLOW}  __  /_/ /  __ \/_  __ \  _ \_  / __  ___/_  __ \     __  /|_/ /_  __ \/  __  /_  _ \     __  __  |_  / / /    / /_  / __ __  __ \  __ \_  ___/  __/___/_/ ___ \ "
+  echo -e "${BOLD}${YELLOW}  _  ____// /_/ /_  / / /  __/  /___(__  )_  / / /     _  /  / / / /_/ // /_/ / /  __/     _  /_/ /_  /_/ /     \ \/ /_/ / _  / / / /_/ /(__  )/ /_ __/_/   __  / "
+  echo -e "${BOLD}${YELLOW}  /_/     \__,_/ /_/ /_/\___//_/_(_)____/ /_/ /_/      /_/  /_/  \__,_/ \__,_/  \___/      /_____/ _\__, /       \_\____/  /_/ /_/\____//____/ \__/ /_/     _/_/  "
+  echo -e "${BOLD}${YELLOW}                                                                                                  /____/           "
+  echo -e "${NC}${RED}-----------------------------------------------"
+
+  echo -e "${YELLOW}    This script is not associated with the official Pterodactyl Project. And will only be used by the creators"
+  echo -e "${YELLOW}    Pterodactyl panel installation script Lib.sh"
+  echo -e "${YELLOW}    Copyright (C) 2024 - 2025, Naoum Galatas, <naoumgalatas43@gmail.com>"
+  echo -e "${YELLOW}    Running $OS version $OS_VER. "
+  echo -e "${RED}-----------------------------------------------"
+  if [ "$1" == "panel" ]; then
+    log "Latest pterodactyl/panel is $PTERODACTYL_PANEL_VERSION"
+  elif [ "$1" == "wings" ]; then
+    log "Latest pterodactyl/wings is $PTERODACTYL_WINGS_VERSION"
+  fi
+  generate_brake 70
+}
 # ------------ User input functions ------------ #
 
-ask_letsencrypt() {
+request_certificate() {
   if [ "$CONFIGURE_UFW" == false ] && [ "$CONFIGURE_FIREWALL_CMD" == false ]; then
-    warning "Let's Encrypt requires port 80/443 to be opened! You have opted out of the automatic firewall configuration; use this at your own risk (if port 80/443 is closed, the script will fail)!"
+    alert "Let's Encrypt requires port 80/443 to be opened! You have opted out of the automatic firewall configuration; use this at your own risk (if port 80/443 is closed, the script will fail)!"
   fi
 
-  echo -e -n "* Do you want to automatically configure HTTPS using Let's Encrypt? (y/N): "
+  echo -e -n "${COLOR_YELLOW}* Do you want to automatically configure HTTPS using Let's Encrypt? (y/N): "
   read -r CONFIRM_SSL
 
   if [[ "$CONFIRM_SSL" =~ [Yy] ]]; then
@@ -80,11 +88,11 @@ ask_letsencrypt() {
   fi
 }
 
-ask_assume_ssl() {
-  output "Let's Encrypt is not going to be automatically configured by this script (user opted out)."
-  output "You can 'assume' Let's Encrypt, which means the script will download a nginx configuration that is configured to use a Let's Encrypt certificate but the script won't obtain the certificate for you."
-  output "If you assume SSL and do not obtain the certificate, your installation will not work."
-  echo -n "* Assume SSL or not? (y/N): "
+ssl_enabled() {
+  log "Let's Encrypt is not going to be automatically configured by this script (user opted out)."
+  log "You can 'assume' Let's Encrypt, which means the script will download a nginx configuration that is configured to use a Let's Encrypt certificate but the script won't obtain the certificate for you."
+  log "If you assume SSL and do not obtain the certificate, your installation will not work."
+  echo -n "${COLOR_YELLOW}* Assume SSL or not? (y/N): "
   read -r ASSUME_SSL_INPUT
 
   [[ "$ASSUME_SSL_INPUT" =~ [Yy] ]] && ASSUME_SSL=true
@@ -95,45 +103,45 @@ check_FQDN_SSL() {
   if [[ $(invalid_ip "$FQDN") == 1 && $FQDN != 'localhost' ]]; then
     SSL_AVAILABLE=true
   else
-    warning "* Let's Encrypt will not be available for IP addresses."
-    output "To use Let's Encrypt, you must use a valid domain name."
+    alert "${COLOR_YELLOW}* Let's Encrypt will not be available for IP addresses."
+    log "To use Let's Encrypt, you must use a valid domain name."
   fi
 }
 
 main() {
   # check if we can detect an already existing installation
   if [ -d "/var/www/pterodactyl" ]; then
-    warning "The script has detected that you already have Pterodactyl panel on your system! You cannot run the script multiple times, it will fail!"
-    echo -e -n "* Are you sure you want to proceed? (y/N): "
+    alert "The script has detected that you already have Pterodactyl panel on your system! You cannot run the script multiple times, it will fail!"
+    echo -e -n "${COLOR_YELLOW}* Are you sure you want to proceed? (y/N): "
     read -r CONFIRM_PROCEED
     if [[ ! "$CONFIRM_PROCEED" =~ [Yy] ]]; then
-      error "Installation aborted!"
+      fail "Installation aborted!"
       exit 1
     fi
   fi
 
-  welcome "panel"
+  greet "panel"
 
   check_os_x86_64
 
   # set database credentials
-  output "Database configuration."
-  output ""
-  output "This will be the credentials used for communication between the MySQL"
-  output "database and the panel. You do not need to create the database"
-  output "before running this script, the script will do that for you."
-  output ""
+  log "Database configuration."
+  log ""
+  log "This will be the credentials used for communication between the MySQL"
+  log "database and the panel. You do not need to create the database"
+  log "before running this script, the script will do that for you."
+  log ""
 
   MYSQL_DB="-"
   while [[ "$MYSQL_DB" == *"-"* ]]; do
     required_input MYSQL_DB "Database name (panel): " "" "panel"
-    [[ "$MYSQL_DB" == *"-"* ]] && error "Database name cannot contain hyphens"
+    [[ "$MYSQL_DB" == *"-"* ]] && fail "Database name cannot contain hyphens"
   done
 
   MYSQL_USER="-"
   while [[ "$MYSQL_USER" == *"-"* ]]; do
     required_input MYSQL_USER "Database username (pterodactyl): " "" "pterodactyl"
-    [[ "$MYSQL_USER" == *"-"* ]] && error "Database user cannot contain hyphens"
+    [[ "$MYSQL_USER" == *"-"* ]] && fail "Database user cannot contain hyphens"
   done
 
   # MySQL password input
@@ -141,13 +149,13 @@ main() {
   password_input MYSQL_PASSWORD "Password (press enter to use randomly generated password): " "MySQL password cannot be empty" "$rand_pw"
 
   readarray -t valid_timezones <<<"$(curl -s "$GITHUB_URL"/configs/valid_timezones.txt)"
-  output "List of valid timezones here $(hyperlink "https://www.php.net/manual/en/timezones.php")"
+  log "List of valid timezones here $(linkify "https://www.php.net/manual/en/timezones.php")"
 
   while [ -z "$timezone" ]; do
     echo -n "* Select timezone [Europe/Stockholm]: "
     read -r timezone_input
 
-    array_contains_element "$timezone_input" "${valid_timezones[@]}" && timezone="$timezone_input"
+    array_contains_item "$timezone_input" "${valid_timezones[@]}" && timezone="$timezone_input"
     [ -z "$timezone_input" ] && timezone="Europe/Stockholm" # because köttbullar!
   done
 
@@ -160,13 +168,13 @@ main() {
   required_input user_lastname "Last name for the initial admin account: " "Name cannot be empty"
   password_input user_password "Password for the initial admin account: " "Password cannot be empty"
 
-  print_brake 72
+  generate_brake 72
 
   # set FQDN
   while [ -z "$FQDN" ]; do
     echo -n "* Set the FQDN of this panel (panel.example.com): "
     read -r FQDN
-    [ -z "$FQDN" ] && error "FQDN cannot be empty"
+    [ -z "$FQDN" ] && fail "FQDN cannot be empty"
   done
 
   # Check if SSL is available
@@ -178,62 +186,62 @@ main() {
   # Only ask about SSL if it is available
   if [ "$SSL_AVAILABLE" == true ]; then
     # Ask if letsencrypt is needed
-    ask_letsencrypt
+    request_certificate
     # If it's already true, this should be a no-brainer
-    [ "$CONFIGURE_LETSENCRYPT" == false ] && ask_assume_ssl
+    [ "$CONFIGURE_LETSENCRYPT" == false ] && ssl_enabled
   fi
 
   # verify FQDN if user has selected to assume SSL or configure Let's Encrypt
   [ "$CONFIGURE_LETSENCRYPT" == true ] || [ "$ASSUME_SSL" == true ] && bash <(curl -s "$GITHUB_URL"/lib/verify-fqdn.sh) "$FQDN"
 
-  # summary
-  summary
+  # overview
+  overview
 
   # confirm installation
-  echo -e -n "\n* Initial configuration completed. Continue with installation? (y/N): "
+  echo -e -n "\n${COLOR_YELLOW}* Initial configuration completed. Continue with installation? (y/N): "
   read -r CONFIRM
   if [[ "$CONFIRM" =~ [Yy] ]]; then
-    run_installer "panel"
+    execute_installer "panel"
   else
-    error "Installation aborted."
+    fail "Installation aborted."
     exit 1
   fi
 }
 
-summary() {
-  print_brake 62
-  output "Pterodactyl panel $PTERODACTYL_PANEL_VERSION with nginx on $OS"
-  output "Database name: $MYSQL_DB"
-  output "Database user: $MYSQL_USER"
-  output "Database password: (censored)"
-  output "Timezone: $timezone"
-  output "Email: $email"
-  output "User email: $user_email"
-  output "Username: $user_username"
-  output "First name: $user_firstname"
-  output "Last name: $user_lastname"
-  output "User password: (censored)"
-  output "Hostname/FQDN: $FQDN"
-  output "Configure Firewall? $CONFIGURE_FIREWALL"
-  output "Configure Let's Encrypt? $CONFIGURE_LETSENCRYPT"
-  output "Assume SSL? $ASSUME_SSL"
-  print_brake 62
+overview() {
+  generate_brake 62
+  log "Pterodactyl panel $PTERODACTYL_PANEL_VERSION with nginx on $OS"
+  log "Database name: $MYSQL_DB"
+  log "Database user: $MYSQL_USER"
+  log "Database password: (censored)"
+  log "Timezone: $timezone"
+  log "Email: $email"
+  log "User email: $user_email"
+  log "Username: $user_username"
+  log "First name: $user_firstname"
+  log "Last name: $user_lastname"
+  log "User password: (censored)"
+  log "Hostname/FQDN: $FQDN"
+  log "Configure Firewall? $CONFIGURE_FIREWALL"
+  log "Configure Let's Encrypt? $CONFIGURE_LETSENCRYPT"
+  log "Assume SSL? $ASSUME_SSL"
+  generate_brake 62
 }
 
 goodbye() {
-  print_brake 62
-  output "Panel installation completed"
-  output ""
+  generate_brake 62
+  log "Panel installation completed"
+  log ""
 
-  [ "$CONFIGURE_LETSENCRYPT" == true ] && output "Your panel should be accessible from $(hyperlink "$FQDN")"
+  [ "$CONFIGURE_LETSENCRYPT" == true ] && output "Your panel should be accessible from $(linkify "$FQDN")"
   [ "$ASSUME_SSL" == true ] && [ "$CONFIGURE_LETSENCRYPT" == false ] && output "You have opted in to use SSL, but not via Let's Encrypt automatically. Your panel will not work until SSL has been configured."
-  [ "$ASSUME_SSL" == false ] && [ "$CONFIGURE_LETSENCRYPT" == false ] && output "Your panel should be accessible from $(hyperlink "$FQDN")"
+  [ "$ASSUME_SSL" == false ] && [ "$CONFIGURE_LETSENCRYPT" == false ] && output "Your panel should be accessible from $(linkify "$FQDN")"
 
-  output ""
-  output "Installation is using nginx on $OS"
-  output "Thank you for using this script."
+  log ""
+  log "Installation is using nginx on $OS"
+  log "Thank you for using this script."
   [ "$CONFIGURE_FIREWALL" == false ] && echo -e "* ${COLOR_RED}Note${COLOR_NC}: If you haven't configured the firewall: 80/443 (HTTP/HTTPS) is required to be open!"
-  print_brake 62
+  generate_brake 62
 }
 
 # run script
