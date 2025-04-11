@@ -93,7 +93,7 @@ linkify() {
 
 # First argument is wings / panel / neither
 greet() {
-   retrieve_latest_versions
+   ret_last_version
   generate_brake 70
   echo -e "${BOLD}${YELLOW}  _________________           ______       ______  ___      _________          ________             _________________              ________________  "
   echo -e "${BOLD}${YELLOW}  ___  /___(_)__  /_   __________  /_      ___   |/  /_____ ______  /____      ___  __ )____  __    _  /_  ____/__  /________________  /______/_/_ \   "
