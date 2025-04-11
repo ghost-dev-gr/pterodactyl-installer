@@ -2,394 +2,208 @@
 
 set -e
 
-######################################################################################
-#                                                                                    #
-# Project 'pterodactyl-installer'                                                    #
-#                                                                                    #
-# Copyright (C) 2018 - 2025, Vilhelm Prytz, <vilhelm@prytznet.se>                    #
-#                                                                                    #
-#   This program is free software: you can redistribute it and/or modify             #
-#   it under the terms of the GNU General Public License as published by             #
-#   the Free Software Foundation, either version 3 of the License, or                #
-#   (at your option) any later version.                                              #
-#                                                                                    #
-#   This program is distributed in the hope that it will be useful,                  #
-#   but WITHOUT ANY WARRANTY; without even the implied warranty of                   #
-#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the                    #
-#   GNU General Public License for more details.                                     #
-#                                                                                    #
-#   You should have received a copy of the GNU General Public License                #
-#   along with this program.  If not, see <https://www.gnu.org/licenses/>.           #
-#                                                                                    #
-# https://github.com/pterodactyl-installer/pterodactyl-installer/blob/master/LICENSE #
-#                                                                                    #
-# This script is not associated with the official Pterodactyl Project.               #
-# https://github.com/ghost-dev-gr/pterodactyl-installer                     #
-#                                                                                    #
-######################################################################################
-check_required_tools() {
-  # List of required tools
-  local required_tools=(curl wget unzip gpg)
-  local missing_tools=()
-
-  # Check which tools are missing
-  for tool in "${required_tools[@]}"; do
-    if ! command -v "$tool" >/dev/null 2>&1; then
-      missing_tools+=("$tool")
-    fi
-  done
-
-  # If any tools are missing, attempt to install them
-  if [ ${#missing_tools[@]} -gt 0 ]; then
-    echo "=> The following required tools are missing: ${missing_tools[*]}"
-    echo "=> Attempting to install missing dependencies..."
-    
-    if command -v apt-get >/dev/null 2>&1; then
-      # Debian/Ubuntu systems
-      apt-get update
-      apt-get install -y "${missing_tools[@]}" || {
-        echo "ERROR: Failed to install dependencies using apt-get"
-        exit 1
-      }
-    elif command -v yum >/dev/null 2>&1; then
-      # RHEL/CentOS systems
-      yum install -y "${missing_tools[@]}" || {
-        echo "ERROR: Failed to install dependencies using yum"
-        exit 1
-      }
-    elif command -v dnf >/dev/null 2>&1; then
-      # Fedora systems
-      dnf install -y "${missing_tools[@]}" || {
-        echo "ERROR: Failed to install dependencies using dnf"
-        exit 1
-      }
-    else
-      echo "ERROR: Could not determine package manager to install missing tools"
-      exit 1
-    fi
-    
-    echo "=> Successfully installed missing dependencies"
-  fi
-}
-
-# Check and install required tools before proceeding
-check_required_tools
-# ------------------ Local lib.sh Setup ----------------- #
-# Function to check if a function exists
+# Check if script is loaded, load if not or fail otherwise.
 fn_exists() { declare -F "$1" >/dev/null; }
-
-# ------------------ Load lib.sh ----------------- #
 if ! fn_exists lib_loaded; then
-    echo "=> Preparing to load lib.sh..."
-    
-    # First try to source from /tmp (if it exists)
-    if [ -f "/tmp/lib.sh" ]; then
-        echo "=> Found lib.sh in /tmp, attempting to load..."
-        # shellcheck source=/tmp/lib.sh
-        source /tmp/lib.sh && {
-            if fn_exists lib_loaded; then
-                echo "=> Successfully loaded lib.sh from /tmp"
-                # Exit this section if successfully loaded
-                true
-            else
-                echo "=> lib.sh in /tmp appears invalid, trying local copy..."
-            fi
-        } || {
-            echo "=> Failed to load lib.sh from /tmp, trying local copy..."
-        }
-    fi
-    
-    # If not loaded from /tmp, try local copy
-    if ! fn_exists lib_loaded; then
-        # Get the directory where this script is located
-        SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-        # Look for lib.sh in ../lib/ relative to the script location
-        PARENT_LIB="$(dirname "$SCRIPT_DIR")/lib/lib.sh"
-        
-        if [ -f "$PARENT_LIB" ]; then
-            echo "=> Found lib.sh in parent lib directory, copying to /tmp..."
-            mkdir -p /tmp
-            cp "$PARENT_LIB" /tmp/lib.sh
-            chmod +x /tmp/lib.sh
-            
-            echo "=> Loading lib.sh from /tmp..."
-            # shellcheck source=/tmp/lib.sh
-            source /tmp/lib.sh || {
-                echo "ERROR: Failed to load lib.sh"
-                exit 1
-            }
-            
-            if ! fn_exists lib_loaded; then
-                echo "ERROR: lib.sh did not load correctly"
-                exit 1
-            fi
-            echo "=> Successfully loaded lib.sh"
-        else
-            echo "ERROR: Could not find lib.sh in expected locations:"
-            echo "1. /tmp/lib.sh"
-            echo "2. $PARENT_LIB"
-            exit 1
-        fi
-    fi
+  # shellcheck source=lib/lib.sh
+  source /tmp/lib.sh || source <(curl -sSL "$GITHUB_BASE_URL/$GITHUB_SOURCE"/lib/lib.sh)
+  ! fn_exists lib_loaded && echo "* FAIL: Could not load lib script" && exit 1
 fi
 
 # ------------------ Variables ----------------- #
-INSTALL_MARIADB="${INSTALL_MARIADB:-false}"
 
-# firewall
-CONFIGURE_FIREWALL="${CONFIGURE_FIREWALL:-false}"
+# Install mariadb
+export INSTALL_MARIADB=false
+
+# Firewall
+export CONFIGURE_FIREWALL=false
 
 # SSL (Let's Encrypt)
-CONFIGURE_LETSENCRYPT="${CONFIGURE_LETSENCRYPT:-false}"
-FQDN="${FQDN:-}"
-EMAIL="${EMAIL:-}"
+export CONFIGURE_LETSENCRYPT=false
+export FQDN=""
+export EMAIL=""
 
 # Database host
-CONFIGURE_DBHOST="${CONFIGURE_DBHOST:-false}"
-CONFIGURE_DB_FIREWALL="${CONFIGURE_DB_FIREWALL:-false}"
-MYSQL_DBHOST_HOST="${MYSQL_DBHOST_HOST:-127.0.0.1}"
-MYSQL_DBHOST_USER="${MYSQL_DBHOST_USER:-pterodactyluser}"
-MYSQL_DBHOST_PASSWORD="${MYSQL_DBHOST_PASSWORD:-}"
+export CONFIGURE_DBHOST=false
+export CONFIGURE_DB_FIREWALL=false
+export MYSQL_DBHOST_HOST="127.0.0.1"
+export MYSQL_DBHOST_USER="pterodactyluser"
+export MYSQL_DBHOST_PASSWORD=""
 
-if [[ $CONFIGURE_DBHOST == true && -z "${MYSQL_DBHOST_PASSWORD}" ]]; then
-  error "Mysql database host user password is required"
-  exit 1
-fi
+# ------------ User input functions ------------ #
 
-# ----------- Installation functions ----------- #
+request_certificate() {
+  if [ "$CONFIGURE_UFW" == false ] && [ "$CONFIGURE_FIREWALL_CMD" == false ]; then
+    alert "Let's Encrypt requires port 80/443 to be opened! You have opted out of the automatic firewall configuration; use this at your own risk (if port 80/443 is closed, the script will fail)!"
+  fi
 
-enable_services() {
-  [ "$INSTALL_MARIADB" == true ] && systemctl enable mariadb
-  [ "$INSTALL_MARIADB" == true ] && systemctl start mariadb
-  systemctl start docker
-  systemctl enable docker
+  alert "You cannot use Let's Encrypt with your hostname as an IP address! It must be a FQDN (e.g. node.example.org)."
+
+  echo -e -n "* Do you want to automatically configure HTTPS using Let's Encrypt? (y/N): "
+  read -r CONFIRM_SSL
+
+  if [[ "$CONFIRM_SSL" =~ [Yy] ]]; then
+    CONFIGURE_LETSENCRYPT=true
+  fi
 }
 
-dep_install() {
-  output "Installing dependencies for $OS $OS_VER..."
+ask_database_user() {
+  echo -n "* Do you want to automatically configure a user for database hosts? (y/N): "
+  read -r CONFIRM_DBHOST
 
-  [ "$CONFIGURE_FIREWALL" == true ] && install_firewall && firewall_ports
-
-  case "$OS" in
-  ubuntu | debian)
-    install_packages "ca-certificates gnupg lsb-release"
-
-    mkdir -p /etc/apt/keyrings
-    curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor --yes -o /etc/apt/keyrings/docker.gpg
-
-    echo \
-      "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/$OS \
-      $(lsb_release -cs) stable" | tee /etc/apt/sources.list.d/docker.list >/dev/null
-    ;;
-
-  rocky | almalinux)
-    install_packages "dnf-utils"
-    dnf config-manager --add-repo=https://download.docker.com/linux/centos/docker-ce.repo
-
-    [ "$CONFIGURE_LETSENCRYPT" == true ] && install_packages "epel-release"
-
-    install_packages "device-mapper-persistent-data lvm2"
-    ;;
-  esac
-
-  # Update the new repos
-  update_repos
-
-  # Install dependencies
-  install_packages "docker-ce docker-ce-cli containerd.io"
-
-  # Install mariadb if needed
-  [ "$INSTALL_MARIADB" == true ] && install_packages "mariadb-server"
-  [ "$CONFIGURE_LETSENCRYPT" == true ] && install_packages "certbot"
-
-  enable_services
-
-  success "Dependencies installed!"
+  if [[ "$CONFIRM_DBHOST" =~ [Yy] ]]; then
+    ask_database_external
+    CONFIGURE_DBHOST=true
+  fi
 }
 
-ptdl_dl() {
-  echo "* Downloading Pterodactyl Wings.. "
+ask_database_external() {
+  echo -n "* Do you want to configure MySQL to be accessed externally? (y/N): "
+  read -r CONFIRM_DBEXTERNAL
 
-  mkdir -p /etc/pterodactyl
-  curl -L -o /usr/local/bin/wings "$WINGS_DL_BASE_URL$ARCH"
-
-  chmod u+x /usr/local/bin/wings
-
-  success "Pterodactyl Wings downloaded successfully"
+  if [[ "$CONFIRM_DBEXTERNAL" =~ [Yy] ]]; then
+    echo -n "* Enter the panel address (blank for any address): "
+    read -r CONFIRM_DBEXTERNAL_HOST
+    if [ "$CONFIRM_DBEXTERNAL_HOST" == "" ]; then
+      MYSQL_DBHOST_HOST="%"
+    else
+      MYSQL_DBHOST_HOST="$CONFIRM_DBEXTERNAL_HOST"
+    fi
+    [ "$CONFIGURE_FIREWALL" == true ] && ask_database_firewall
+    return 0
+  fi
 }
 
-install_golang() {
-  output "Installing Go 1.22.1..."
-  wget https://go.dev/dl/go1.22.1.linux-amd64.tar.gz -O /tmp/go.tar.gz
-  rm -rf /usr/local/go
-  tar -C /usr/local -xzf /tmp/go.tar.gz
-  echo 'export PATH=$PATH:/usr/local/go/bin' >> /etc/profile
-  source /etc/profile
+ask_database_firewall() {
+  alert "Allow incoming traffic to port 3306 (MySQL) can potentially be a security risk, unless you know what you are doing!"
+  echo -n "* Would you like to allow incoming traffic to port 3306? (y/N): "
+  read -r CONFIRM_DB_FIREWALL
+  if [[ "$CONFIRM_DB_FIREWALL" =~ [Yy] ]]; then
+    CONFIGURE_DB_FIREWALL=true
+  fi
 }
 
-systemd_file() {
-  output "Installing systemd service.."
+####################
+## MAIN FUNCTIONS ##
+####################
 
-  curl -o /etc/systemd/system/wings.service "$GITHUB_URL"/configs/wings.service
-  systemctl daemon-reload
-  systemctl enable wings
+main() {
+  # check if we can detect an already existing installation
+  if [ -d "/etc/pterodactyl" ]; then
+    alert "The script has detected that you already have Pterodactyl wings on your system! You cannot run the script multiple times, it will fail!"
+    echo -e -n "* Are you sure you want to proceed? (y/N): "
+    read -r CONFIRM_PROCEED
+    if [[ ! "$CONFIRM_PROCEED" =~ [Yy] ]]; then
+      fail "Installation aborted!"
+      exit 1
+    fi
+  fi
 
-  success "Installed systemd service!"
-}
+  greet "wings"
 
-firewall_ports() {
-  output "Opening port 22 (SSH), 8080 (Wings Port), 2022 (Wings SFTP Port)"
+  check_virt
 
-  [ "$CONFIGURE_LETSENCRYPT" == true ] && firewall_allow_ports "80 443"
-  [ "$CONFIGURE_DB_FIREWALL" == true ] && firewall_allow_ports "3306"
+  echo "* "
+  echo "* The installer will install Docker, required dependencies for Wings"
+  echo "* as well as Wings itself. But it's still required to create the node"
+  echo "* on the panel and then place the configuration file on the node manually after"
+  echo "* the installation has finished. Read more about this process on the"
+  echo "* official documentation: $(linkify 'https://pterodactyl.io/wings/1.0/installing.html#configure')"
+  echo "* "
+  echo -e "* ${COLOR_RED}Note${COLOR_NC}: this script will not start Wings automatically (will install systemd service, not start it)."
+  echo -e "* ${COLOR_RED}Note${COLOR_NC}: this script will not enable swap (for docker)."
+  generate_brake 42
 
-  firewall_allow_ports "22"
-  output "Allowed port 22"
-  firewall_allow_ports "8080"
-  output "Allowed port 8080"
-  firewall_allow_ports "2022"
-  output "Allowed port 2022"
+  ask_firewall CONFIGURE_FIREWALL
 
-  success "Firewall ports opened!"
-}
+  ask_database_user
 
-letsencrypt() {
-  FAILED=false
+  if [ "$CONFIGURE_DBHOST" == true ]; then
+    type mysql >/dev/null 2>&1 && HAS_MYSQL=true || HAS_MYSQL=false
 
-  output "Configuring LetsEncrypt.."
+    if [ "$HAS_MYSQL" == false ]; then
+      INSTALL_MARIADB=true
+    fi
 
-  # If user has nginx
-  systemctl stop nginx || true
+    MYSQL_DBHOST_USER="-"
+    while [[ "$MYSQL_DBHOST_USER" == *"-"* ]]; do
+      required_input MYSQL_DBHOST_USER "Database host username (pterodactyluser): " "" "pterodactyluser"
+      [[ "$MYSQL_DBHOST_USER" == *"-"* ]] && fail "Database user cannot contain hyphens"
+    done
 
-  # Obtain certificate
-  certbot certonly --no-eff-email --email "$EMAIL" --standalone -d "$FQDN" || FAILED=true
+    password_input MYSQL_DBHOST_PASSWORD "Database host password: " "Password cannot be empty"
+  fi
 
-  systemctl start nginx || true
+  request_certificate
 
-  # Check if it succeded
-  if [ ! -d "/etc/letsencrypt/live/$FQDN/" ] || [ "$FAILED" == true ]; then
-    warning "The process of obtaining a Let's Encrypt certificate failed!"
+  if [ "$CONFIGURE_LETSENCRYPT" == true ]; then
+    while [ -z "$FQDN" ]; do
+      echo -n "* Set the FQDN to use for Let's Encrypt (node.example.com): "
+      read -r FQDN
+
+      ASK=false
+
+      [ -z "$FQDN" ] && fail "FQDN cannot be empty"                                                            # check if FQDN is empty
+      bash <(curl -s "$GITHUB_URL"/lib/verify-fqdn.sh) "$FQDN" || ASK=true                                      # check if FQDN is valid
+      [ -d "/etc/letsencrypt/live/$FQDN/" ] && fail "A certificate with this FQDN already exists!" && ASK=true # check if cert exists
+
+      [ "$ASK" == true ] && FQDN=""
+      [ "$ASK" == true ] && echo -e -n "* Do you still want to automatically configure HTTPS using Let's Encrypt? (y/N): "
+      [ "$ASK" == true ] && read -r CONFIRM_SSL
+
+      if [[ ! "$CONFIRM_SSL" =~ [Yy] ]] && [ "$ASK" == true ]; then
+        CONFIGURE_LETSENCRYPT=false
+        FQDN=""
+      fi
+    done
+  fi
+
+  if [ "$CONFIGURE_LETSENCRYPT" == true ]; then
+    # set EMAIL
+    while ! verify_email "$EMAIL"; do
+      echo -n "* Enter email address for Let's Encrypt: "
+      read -r EMAIL
+
+      verify_email "$EMAIL" || fail "Email cannot be empty or invalid"
+    done
+  fi
+
+  echo -n "* Proceed with installation? (y/N): "
+
+  read -r CONFIRM
+  if [[ "$CONFIRM" =~ [Yy] ]]; then
+    execute_installer "wings"
   else
-    success "The process of obtaining a Let's Encrypt certificate succeeded!"
+    fail "Installation aborted."
+    exit 1
   fi
 }
 
-configure_mysql() {
-  output "Configuring MySQL.."
-
-  create_db_user "$MYSQL_DBHOST_USER" "$MYSQL_DBHOST_PASSWORD" "$MYSQL_DBHOST_HOST"
-  grant_all_privileges "*" "$MYSQL_DBHOST_USER" "$MYSQL_DBHOST_HOST"
-
-  if [ "$MYSQL_DBHOST_HOST" != "127.0.0.1" ]; then
-    echo "* Changing MySQL bind address.."
-
-    case "$OS" in
-    debian | ubuntu)
-      sed -i 's/127.0.0.1/0.0.0.0/g' /etc/mysql/mariadb.conf.d/50-server.cnf
-      ;;
-    rocky | almalinux)
-      sed -ne 's/^#bind-address=0.0.0.0$/bind-address=0.0.0.0/' /etc/my.cnf.d/mariadb-server.cnf
-      ;;
-    esac
-
-    systemctl restart mysqld
-  fi
-
-  success "MySQL configured!"
+function goodbye {
+  echo ""
+  generate_brake 70
+  echo "* Wings installation completed"
+  echo "*"
+  echo "* To continue, you need to configure Wings to run with your panel"
+  echo "* Please refer to the official guide, $(linkify 'https://pterodactyl.io/wings/1.0/installing.html#configure')"
+  echo "* "
+  echo "* You can either copy the configuration file from the panel manually to /etc/pterodactyl/config.yml"
+  echo "* or, you can use the \"auto deploy\" button from the panel and simply paste the command in this terminal"
+  echo "* "
+  echo "* You can then start Wings manually to verify that it's working"
+  echo "*"
+  echo "* sudo wings"
+  echo "*"
+  echo "* Once you have verified that it is working, use CTRL+C and then start Wings as a service (runs in the background)"
+  echo "*"
+  echo "* systemctl start wings"
+  echo "*"
+  echo -e "* ${COLOR_RED}Note${COLOR_NC}: It is recommended to enable swap (for Docker, read more about it in official documentation)."
+  [ "$CONFIGURE_FIREWALL" == false ] && echo -e "* ${COLOR_RED}Note${COLOR_NC}: If you haven't configured your firewall, ports 8080 and 2022 needs to be open."
+  generate_brake 70
+  echo ""
 }
 
-# --------------- Main functions --------------- #
-
-perform_install() {
-  output "Installing pterodactyl wings.."
-  dep_install
-  
-  install_golang
-  ptdl_dl
-  systemd_file
-
-  
-  
-  [ "$CONFIGURE_DBHOST" == true ] && configure_mysql
-  [ "$CONFIGURE_LETSENCRYPT" == true ] && letsencrypt
-
-  # Create server_certs directory
-  mkdir -p /srv/server_certs
-  chmod 700 /srv/server_certs
-  
-  output "Downloading srv wings"
-
-  # Set the installation directory
-  INSTALL_DIR="/srv/wings"
-  
-  # Ensure the directory exists
-  mkdir -p "$INSTALL_DIR" || { error "Failed to create $INSTALL_DIR"; return 1; }
-  cd "$INSTALL_DIR" || { error "Failed to navigate to $INSTALL_DIR"; return 1; }
-
-  LOCATION=$(curl -s https://api.github.com/repos/pterodactyl/wings/releases/latest \
-    | grep "tag_name" \
-    | awk -F '"' '{print "https://github.com/pterodactyl/wings/archive/" $4 ".zip"}')
-
-  if [ -z "$LOCATION" ]; then
-    error "Failed to fetch the latest Wings release URL."
-    return 1
-  fi
-
-  curl -L -o wings_latest.zip "$LOCATION" || { error "Failed to download Wings"; return 1; }
-  unzip -o wings_latest.zip || { error "Failed to unzip Wings"; return 1; }
-
-  # Find the extracted folder (should match wings-* format)
-  EXTRACTED_DIR=$(find . -maxdepth 1 -type d -name "wings-*" | head -n 1)
-  
-  if [ -z "$EXTRACTED_DIR" ]; then
-    error "Failed to find extracted Wings folder."
-    return 1
-  fi
-
-  output "Moving files from $EXTRACTED_DIR to /srv/wings..."
-  cp -r "$EXTRACTED_DIR"/* /srv/wings/ || { error "Failed to move files"; return 1; }
-  success "Files moved successfully!"
-  
- # Move router_server_proxy.go from the installer directory to the /srv/wings/router/ directory
-  echo "=> Moving router_server_proxy.go from /root/pterodactyl-installer/installers to /srv/wings/router/"
-
-  # Ensure the destination directory exists
-  mkdir -p /srv/wings/router || { error "Failed to create /srv/wings/router"; return 1; }
-
-  # Move the file and check if it was successful
-  mv /root/pterodactyl-installer/installers/router_server_proxy.go /srv/wings/router/ || { error "Failed to move router_server_proxy.go to /srv/wings/router/"; exit 1; }
-
-  success "Custom proxy routes moved successfully!"
-
-
-  
-  # Add proxy endpoints to router.go
-  output "Adding proxy endpoints to router..."
-  ROUTER_FILE="/srv/wings/router/router.go"
-  if [ -f "$ROUTER_FILE" ]; then
-    sed -i '/server.POST("\/ws\/deny", postServerDenyWSTokens)/a \
-        server.POST("\/proxy\/create", postServerProxyCreate)\
-        server.POST("\/proxy\/delete", postServerProxyDelete)' "$ROUTER_FILE"
-    success "Proxy endpoints added to router"
-  else
-    warning "Router file not found at $ROUTER_FILE - proxy endpoints not added"
-  fi
-
-
-  # Stop, rebuild, and restart Wings
-  cd /srv/wings
-  systemctl stop wings || warning "Failed to stop Wings, continuing..."
-  go get github.com/go-acme/lego/v4 || { error "Go get failed"; return 1; }
-  go mod tidy || { error "Go mod tidy failed"; return 1; }
-  go build -o /usr/local/bin/wings || { error "Go build failed"; return 1; }
-  chmod +x /usr/local/bin/wings || { error "Failed to set executable permissions"; return 1; }
-  systemctl start wings || { error "Failed to start Wings"; return 1; }
-
-  success "Wings installation and update completed successfully!"
-  return 0
-}
-
-
-# ---------------- Installation ---------------- #
-
-perform_install
+# run script
+main
+goodbye
