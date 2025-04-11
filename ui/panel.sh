@@ -447,9 +447,9 @@ goodbye() {
   log "Panel installation completed"
   log ""
 
-  [ "$CONFIGURE_LETSENCRYPT" == true ] && output "Your panel should be accessible from $(linkify "$FQDN")"
-  [ "$ASSUME_SSL" == true ] && [ "$CONFIGURE_LETSENCRYPT" == false ] && output "You have opted in to use SSL, but not via Let's Encrypt automatically. Your panel will not work until SSL has been configured."
-  [ "$ASSUME_SSL" == false ] && [ "$CONFIGURE_LETSENCRYPT" == false ] && output "Your panel should be accessible from $(linkify "$FQDN")"
+  [ "$CONFIGURE_LETSENCRYPT" == true ] && log "Your panel should be accessible from $(linkify "$FQDN")"
+  [ "$ASSUME_SSL" == true ] && [ "$CONFIGURE_LETSENCRYPT" == false ] && log "You have opted in to use SSL, but not via Let's Encrypt automatically. Your panel will not work until SSL has been configured."
+  [ "$ASSUME_SSL" == false ] && [ "$CONFIGURE_LETSENCRYPT" == false ] && log "Your panel should be accessible from $(linkify "$FQDN")"
 
   log ""
   log "Installation is using nginx on $OS"
