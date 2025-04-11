@@ -409,7 +409,6 @@ check_os_x86_64() {
     fi
   fi
 }
-export DEBIAN_FRONTEND=noninteractive
 
 # Check OS
 . /etc/os-release
