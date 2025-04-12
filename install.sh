@@ -53,61 +53,18 @@ run() {
   rev_lib_source
   execute_ui "${1//_canary/}" |& tee -a $LOG_PATH
 
+  # Skip confirmation for next step, always assume yes
   if [[ -n $2 ]]; then
-    echo -e -n "* Installation of $1 completed. Do you want to proceed to $2 installation? (y/N): "
-    read -r CONFIRM
-    if [[ "$CONFIRM" =~ [Yy] ]]; then
-      run "$2"
-    else
-      fail "Installation of $2 aborted."
-      exit 1
-    fi
+    echo "* Installation of $1 completed. Proceeding to $2 installation..."
+    run "$2"
   fi
 }
 
-# Main Menu
+# Main Menu (skipping user interaction)
 done=false
-while [ "$done" == false ]; do
-  options=(
-    "Install the panel"
-    "Install Wings"
-    "Install both [0] and [1] on the same machine (wings script runs after panel)"
 
-  )
-
-  actions=(
-    "panel"
-    "wings"
-    "panel;wings"
-
-  )
-
-  # Display options with custom design
-  echo -e "${BOLD}${GREEN}Select the operation you wish to perform:${NC}"
-  echo -e "${RED}-----------------------------------------------${NC}"
-
-  for i in "${!options[@]}"; do
-    echo -e "${BOLD}${BLUE}[${i}]${NC} ${options[$i]}"
-  done
-
-  echo -e "${RED}-----------------------------------------------${NC}"
-  echo -n "* Please input a number from 0-$((${#actions[@]} - 1)): "
-  read -r action
-
-  # Validate input
-  [ -z "$action" ] && echo -e "${RED}Input is required! Please try again.${NC}" && continue
-
-  valid_input=("$(for ((i = 0; i <= ${#actions[@]} - 1; i += 1)); do echo "${i}"; done)")
-  if [[ ! " ${valid_input[*]} " =~ ${action} ]]; then
-    echo -e "${RED}Invalid option! Please try again.${NC}"
-    continue
-  fi
-
-  # Execute the chosen action
-  done=true
-  IFS=";" read -r i1 i2 <<<"${actions[$action]}"
-  run "$i1" "$i2"
-done
+# Define actions to install both panel and wings automatically
+run "panel" "wings"
 
 # Clean up lib.sh after use
 rm -rf /tmp/lib.sh
