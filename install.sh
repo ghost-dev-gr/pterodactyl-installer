@@ -33,6 +33,9 @@ export GITHUB_BASE_URL="https://raw.githubusercontent.com/ghost-dev-gr/pterodact
 
 LOG_PATH="/var/log/pterodactyl-installer.log"
 
+# Set non-interactive mode for apt-get and other prompts
+export DEBIAN_FRONTEND=noninteractive
+
 # check for curl
 if ! [ -x "$(command -v curl)" ]; then
   echo "* curl is required in order for this script to work."
@@ -70,3 +73,12 @@ run "panel" "wings"
 rm -rf /tmp/lib.sh
 
 echo -e "${GREEN}Installation process completed!${NC}"
+
+# Handle apt-get installation without prompts
+echo -e "${YELLOW}Installing required packages without interaction...${NC}"
+sudo apt-get update -y
+sudo apt-get install -y curl git python3-pip
+
+# Bypass any prompts that require "pressing Enter"
+yes | sudo apt-get install -y netdata
+
