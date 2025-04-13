@@ -252,7 +252,7 @@ install_packages() {    #!
 
 required_input() {    #!
   local __resultvar=$1
-  
+  local result=''
 
   while [ -z "$result" ]; do
     echo -n "* ${2}"
@@ -270,7 +270,8 @@ required_input() {    #!
 
 email_input() {    #!
   local __resultvar=$1
-
+  local result=''
+  
   while ! verify_email "$result"; do
     echo -n "* ${2}"
     read -r result
