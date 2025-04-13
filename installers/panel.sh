@@ -397,7 +397,7 @@ firewall_ports() {
 
 letsencrypt() {
   FAILED=false
-
+  local CONFIGURE_SSL='y'
   log "Configuring Let's Encrypt..."
 
   # Obtain certificate
@@ -406,8 +406,6 @@ letsencrypt() {
   # Check if it succeded
   if [ ! -d "/etc/letsencrypt/live/$FQDN/" ] || [ "$FAILED" == true ]; then
     alert "The process of obtaining a Let's Encrypt certificate failed!"
-    echo -n "* Still assume SSL? (y/N): "
-    read -r CONFIGURE_SSL
 
     if [[ "$CONFIGURE_SSL" =~ [Yy] ]]; then
       ASSUME_SSL=true
