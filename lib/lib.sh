@@ -252,11 +252,11 @@ install_packages() {    #!
 
 required_input() {    #!
   local __resultvar=$1
-  local result=''
+  local result='y'
 
   while [ -z "$result" ]; do
     echo -n "* ${2}"
-    read -r result
+    #read -r result
 
     if [ -z "${3}" ]; then
       [ -z "$result" ] && result="${4}"
@@ -270,11 +270,11 @@ required_input() {    #!
 
 email_input() {    #!
   local __resultvar=$1
-  local result=''
+  local result='y'
 
   while ! verify_email "$result"; do
     echo -n "* ${2}"
-    read -r result
+  #  read -r result
 
     verify_email "$result" || fail "${3}"
   done
@@ -325,16 +325,16 @@ ask_firewall() {
   case "$OS" in
   ubuntu | debian)
     echo -e -n "* Do you want to automatically configure UFW (firewall)? (y/N): "
-    read -r CONFIRM_UFW
-
+    #read -r CONFIRM_UFW
+    local CONFIRM_UFW='y'
     if [[ "$CONFIRM_UFW" =~ [Yy] ]]; then
       eval "$__resultvar="'true'""
     fi
     ;;
   rocky | almalinux)
     echo -e -n "* Do you want to automatically configure firewall-cmd (firewall)? (y/N): "
-    read -r CONFIRM_FIREWALL_CMD
-
+   # read -r CONFIRM_FIREWALL_CMD
+    local CONFIRM_FIREWALL_CMD='y'
     if [[ "$CONFIRM_FIREWALL_CMD" =~ [Yy] ]]; then
       eval "$__resultvar="'true'""
     fi
@@ -397,11 +397,12 @@ firewall_allow_ports() {
 # panel x86_64 check
 check_os_x86_64() {
   if [ "${ARCH}" != "amd64" ]; then
+    local choice='y'
     alert "Detected CPU architecture $CPU_ARCHITECTURE"
     alert "Using any other architecture than 64 bit (x86_64) will cause problems."
 
     echo -e -n "* Are you sure you want to proceed? (y/N):"
-    read -r choice
+    #read -r choice
 
     if [[ ! "$choice" =~ [Yy] ]]; then
       fail "Installation aborted!"
