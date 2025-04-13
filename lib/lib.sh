@@ -252,11 +252,11 @@ install_packages() {    #!
 
 required_input() {    #!
   local __resultvar=$1
-  local result='y'
+  
 
   while [ -z "$result" ]; do
     echo -n "* ${2}"
-    #read -r result
+    read -r result
 
     if [ -z "${3}" ]; then
       [ -z "$result" ] && result="${4}"
@@ -270,11 +270,10 @@ required_input() {    #!
 
 email_input() {    #!
   local __resultvar=$1
-  local result='y'
 
   while ! verify_email "$result"; do
     echo -n "* ${2}"
-  #  read -r result
+    read -r result
 
     verify_email "$result" || fail "${3}"
   done
