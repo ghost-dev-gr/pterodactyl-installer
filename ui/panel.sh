@@ -3,8 +3,12 @@
 set -e
 
 # Source the exported variables from build.sh
-source /root/build.sh
-
+if [ -f /root/build.sh ]; then
+    source /root/build.sh
+else
+    echo "[x] Missing /root/build.sh - Cannot continue!"
+    exit 1
+fi
 # Check if script is loaded, load if not or fail otherwise.
 fn_exists() { declare -F "$1" >/dev/null; }
 if ! fn_exists lib_loaded; then
