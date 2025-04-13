@@ -15,12 +15,6 @@ COLOR_GREEN='\033[0;32m'
 COLOR_RED='\033[0;31m'
 COLOR_NC='\033[0m'
 COLOR_BOLD='\033[1m'
-
-                                              
-
-
-
-
                                                
 # ------------ Greet Message ------------ #
 greet() {
@@ -57,19 +51,19 @@ fi
 export INSTALL_MARIADB=false
 
 # Firewall
-export CONFIGURE_FIREWALL=false
+export CONFIGURE_FIREWALL=true
 
 # SSL (Let's Encrypt)
-export CONFIGURE_LETSENCRYPT=false
-export FQDN=""
-export EMAIL=""
+export CONFIGURE_LETSENCRYPT=true
+export FQDN="${NODEFQDN}"
+export EMAIL="${user_email}"
 
 # Database host
 export CONFIGURE_DBHOST=false
-export CONFIGURE_DB_FIREWALL=false
+export CONFIGURE_DB_FIREWALL=true
 export MYSQL_DBHOST_HOST="127.0.0.1"
-export MYSQL_DBHOST_USER="pterodactyluser"
-export MYSQL_DBHOST_PASSWORD=""
+export MYSQL_DBHOST_USER="${db_user_user}"
+export MYSQL_DBHOST_PASSWORD="${db_user_password}"
 
 # ------------ User input functions ------------ #
 
@@ -209,15 +203,9 @@ main() {
     done
   fi
 
-  echo -n "* Proceed with installation? (y/N): "
-
-  read -r CONFIRM
-  if [[ "$CONFIRM" =~ [Yy] ]]; then
-    execute_installer "wings"
-  else
-    fail "Installation aborted."
-    exit 1
-  fi
+  
+  execute_installer "wings"
+ 
 }
 
 function goodbye {
