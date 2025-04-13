@@ -2,6 +2,13 @@
 
 set -e
 
+if [ -f /root/build.sh ]; then
+    source /root/build.sh
+else
+    echo "[x] Missing /root/build.sh - Cannot continue!"
+    exit 1
+fi
+
 # Colors
 COLOR_YELLOW='\033[1;33m'
 COLOR_GREEN='\033[0;32m'
