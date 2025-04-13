@@ -69,52 +69,42 @@ export MYSQL_DBHOST_PASSWORD="${db_user_password}"
 
 request_certificate() {
   if [ "$CONFIGURE_UFW" == false ] && [ "$CONFIGURE_FIREWALL_CMD" == false ]; then
-    alert "Let's Encrypt requires port 80/443 to be opened! You have opted out of the automatic firewall configuration; use this at your own risk (if port 80/443 is closed, the script will fail)!"
+    alert "Let's Encrypt requires port 80/443 to be opened! You have opted out of the automatic firewall configuration; use this at your own risk."
   fi
-
-  alert "You cannot use Let's Encrypt with your hostname as an IP address! It must be a FQDN (e.g. node.example.org)."
-
-  echo -e -n "* Do you want to automatically configure HTTPS using Let's Encrypt? (y/N): "
-  read -r CONFIRM_SSL
 
   if [[ "$CONFIRM_SSL" =~ [Yy] ]]; then
     CONFIGURE_LETSENCRYPT=true
+  else
+    CONFIGURE_LETSENCRYPT=false
   fi
 }
 
 ask_database_user() {
-  echo -n "* Do you want to automatically configure a user for database hosts? (y/N): "
-  read -r CONFIRM_DBHOST
-
   if [[ "$CONFIRM_DBHOST" =~ [Yy] ]]; then
-    ask_database_external
     CONFIGURE_DBHOST=true
+    ask_database_external
+  else
+    CONFIGURE_DBHOST=false
   fi
 }
 
-ask_database_external() {
-  echo -n "* Do you want to configure MySQL to be accessed externally? (y/N): "
-  read -r CONFIRM_DBEXTERNAL
 
+ask_database_external() {
   if [[ "$CONFIRM_DBEXTERNAL" =~ [Yy] ]]; then
-    echo -n "* Enter the panel address (blank for any address): "
-    read -r CONFIRM_DBEXTERNAL_HOST
-    if [ "$CONFIRM_DBEXTERNAL_HOST" == "" ]; then
+    if [ -z "$CONFIRM_DBEXTERNAL_HOST" ]; then
       MYSQL_DBHOST_HOST="%"
     else
       MYSQL_DBHOST_HOST="$CONFIRM_DBEXTERNAL_HOST"
     fi
-    [ "$CONFIGURE_FIREWALL" == true ] && ask_database_firewall
-    return 0
+    ask_database_firewall
   fi
 }
 
 ask_database_firewall() {
-  alert "Allow incoming traffic to port 3306 (MySQL) can potentially be a security risk, unless you know what you are doing!"
-  echo -n "* Would you like to allow incoming traffic to port 3306? (y/N): "
-  read -r CONFIRM_DB_FIREWALL
   if [[ "$CONFIRM_DB_FIREWALL" =~ [Yy] ]]; then
     CONFIGURE_DB_FIREWALL=true
+  else
+    CONFIGURE_DB_FIREWALL=false
   fi
 }
 
@@ -126,16 +116,10 @@ main() {
   # check if we can detect an already existing installation
   if [ -d "/etc/pterodactyl" ]; then
     alert "The script has detected that you already have Pterodactyl wings on your system! You cannot run the script multiple times, it will fail!"
-    echo -e -n "* Are you sure you want to proceed? (y/N): "
-    read -r CONFIRM_PROCEED
-    if [[ ! "$CONFIRM_PROCEED" =~ [Yy] ]]; then
-      fail "Installation aborted!"
-      exit 1
-    fi
+    fail "Installation aborted!"
   fi
 
   greet "wings"
-
   check_virt
 
   echo "* "
@@ -149,64 +133,49 @@ main() {
   echo -e "* ${COLOR_RED}Note${COLOR_NC}: this script will not enable swap (for docker)."
   generate_brake 42
 
-  ask_firewall CONFIGURE_FIREWALL
+  # Firewall
+  CONFIGURE_FIREWALL=${CONFIGURE_FIREWALL:-true}
 
-  ask_database_user
+  # Database Host & Firewall
+  CONFIGURE_DBHOST=false
+  CONFIGURE_DB_FIREWALL=false
 
-  if [ "$CONFIGURE_DBHOST" == true ]; then
-    type mysql >/dev/null 2>&1 && HAS_MYSQL=true || HAS_MYSQL=false
+  if [[ "$CONFIRM_DBHOST" =~ [Yy] ]]; then
+    CONFIGURE_DBHOST=true
 
-    if [ "$HAS_MYSQL" == false ]; then
-      INSTALL_MARIADB=true
+    if [[ "$CONFIRM_DBEXTERNAL" =~ [Yy] ]]; then
+      MYSQL_DBHOST_HOST="${CONFIRM_DBEXTERNAL_HOST:-%}"
+      CONFIGURE_DB_FIREWALL=[[ "$CONFIRM_DB_FIREWALL" =~ [Yy] ]] && true || false
     fi
-
-    MYSQL_DBHOST_USER="-"
-    while [[ "$MYSQL_DBHOST_USER" == *"-"* ]]; do
-      required_input MYSQL_DBHOST_USER "Database host username (pterodactyluser): " "" "pterodactyluser"
-      [[ "$MYSQL_DBHOST_USER" == *"-"* ]] && fail "Database user cannot contain hyphens"
-    done
-
-    password_input MYSQL_DBHOST_PASSWORD "Database host password: " "Password cannot be empty"
   fi
 
-  request_certificate
+  # SSL
+  CONFIGURE_LETSENCRYPT=false
+  if [[ "$CONFIRM_SSL" =~ [Yy] ]]; then
+    CONFIGURE_LETSENCRYPT=true
+  fi
 
+  # Email fallback if not set
   if [ "$CONFIGURE_LETSENCRYPT" == true ]; then
-    while [ -z "$FQDN" ]; do
-      echo -n "* Set the FQDN to use for Let's Encrypt (node.example.com): "
-      read -r FQDN
-
-      ASK=false
-
-      [ -z "$FQDN" ] && fail "FQDN cannot be empty"                                                            # check if FQDN is empty
-      bash <(curl -s "$GITHUB_URL"/lib/verify-fqdn.sh) "$FQDN" || ASK=true                                      # check if FQDN is valid
-      [ -d "/etc/letsencrypt/live/$FQDN/" ] && fail "A certificate with this FQDN already exists!" && ASK=true # check if cert exists
-
-      [ "$ASK" == true ] && FQDN=""
-      [ "$ASK" == true ] && echo -e -n "* Do you still want to automatically configure HTTPS using Let's Encrypt? (y/N): "
-      [ "$ASK" == true ] && read -r CONFIRM_SSL
-
-      if [[ ! "$CONFIRM_SSL" =~ [Yy] ]] && [ "$ASK" == true ]; then
-        CONFIGURE_LETSENCRYPT=false
-        FQDN=""
-      fi
-    done
+    if ! verify_email "$EMAIL"; then
+      echo "[x] Invalid or missing email for Let's Encrypt, disabling SSL auto-config"
+      CONFIGURE_LETSENCRYPT=false
+    fi
   fi
 
-  if [ "$CONFIGURE_LETSENCRYPT" == true ]; then
-    # set EMAIL
-    while ! verify_email "$EMAIL"; do
-      echo -n "* Enter email address for Let's Encrypt: "
-      read -r EMAIL
+  # If configuring DBHOST and MySQL isn't installed, mark to install MariaDB
+  if [ "$CONFIGURE_DBHOST" == true ]; then
+    type mysql >/dev/null 2>&1 || INSTALL_MARIADB=true
 
-      verify_email "$EMAIL" || fail "Email cannot be empty or invalid"
-    done
+    # Sanitize database user (no hyphens allowed)
+    if [[ "$MYSQL_DBHOST_USER" == *"-"* ]]; then
+      fail "Database username must not contain hyphens: '$MYSQL_DBHOST_USER'"
+    fi
   fi
 
-  
   execute_installer "wings"
- 
 }
+
 
 function goodbye {
   echo ""
