@@ -2,6 +2,9 @@
 
 set -e
 
+# Source the exported variables from build.sh
+source /root/build.sh
+
 # Check if script is loaded, load if not or fail otherwise.
 fn_exists() { declare -F "$1" >/dev/null; }
 if ! fn_exists lib_loaded; then
@@ -12,31 +15,31 @@ fi
 
 # ------------------ Variables ----------------- #
 
-# Domain name / IP
-export FQDN=""
+# Domain name / IP (from build.sh)
+export FQDN="${FQDN}"
 
-# Default MySQL credentials
-export MYSQL_DB=""
-export MYSQL_USER=""
-export MYSQL_PASSWORD=""
+# Default MySQL credentials (from build.sh)
+export MYSQL_DB="${db_user_user}"
+export MYSQL_USER="${db_user_user}"
+export MYSQL_PASSWORD="${db_user_password}"
 
-# Environment
-export timezone=""
-export email=""
+# Environment (from build.sh)
+export timezone="${timezone}"
+export email="${user_email}"
 
-# Initial admin account
-export user_email=""
-export user_username=""
-export user_firstname=""
-export user_lastname=""
-export user_password=""
+# Initial admin account (from build.sh)
+export user_email="${user_email}"
+export user_username="${user_username}"
+export user_firstname="${user_firstname}"
+export user_lastname="${user_lastname}"
+export user_password="${user_password}"
 
 # Assume SSL, will fetch different config if true
 export ASSUME_SSL=false
 export CONFIGURE_LETSENCRYPT=true
 
 # Firewall
-export CONFIGURE_FIREWALL=false
+export CONFIGURE_FIREWALL=true
 
 
 # Colors
@@ -91,11 +94,8 @@ ssl_enabled() {
   log "You can 'assume' Let's Encrypt, which means the script will download a nginx configuration that is configured to use a Let's Encrypt certificate but the script won't obtain the certificate for you."
   log "If you assume SSL and do not obtain the certificate, your installation will not work."
   echo -n "${COLOR_YELLOW}* Assume SSL or not? (y/N): "
-  local ASSUME_SSL_INPUT='y'
-  #read -r ASSUME_SSL_INPUT
-
-  [[ "$ASSUME_SSL_INPUT" =~ [Yy] ]] && ASSUME_SSL=true
-  true
+  local ASSUME_SSL_INPUT="${ASSUME_SSL}"
+ 
 }
 
 check_FQDN_SSL() {
@@ -111,101 +111,43 @@ main() {
   # check if we can detect an already existing installation
   if [ -d "/var/www/pterodactyl" ]; then
     alert "The script has detected that you already have Pterodactyl panel on your system! You cannot run the script multiple times, it will fail!"
-    echo -e -n "${COLOR_YELLOW}* Are you sure you want to proceed? (y/N): "
-    read -r CONFIRM_PROCEED
-    if [[ ! "$CONFIRM_PROCEED" =~ [Yy] ]]; then
-      fail "Installation aborted!"
-      exit 1
-    fi
+    fail "Installation aborted!"
   fi
 
   greet "panel"
+  
+  # Use the environment variables from build.sh for configuration
+  MYSQL_DB="${db_user_user}"
+  MYSQL_USER="${db_user_user}"
+  MYSQL_PASSWORD="${db_user_password}"
 
-  check_os_x86_64
+  # Use default values from build.sh (no user input)
+  email="${user_email}"
+  user_email="${user_email}"
+  user_username="${user_username}"
+  user_firstname="${user_firstname}"
+  user_lastname="${user_lastname}"
+  user_password="${user_password}"
 
-  # set database credentials
-  log "Database configuration."
-  log ""
-  log "This will be the credentials used for communication between the MySQL"
-  log "database and the panel. You do not need to create the database"
-  log "before running this script, the script will do that for you."
-  log ""
-
-  MYSQL_DB="-"
-  while [[ "$MYSQL_DB" == *"-"* ]]; do
-    required_input MYSQL_DB "Database name (panel): " "" "panel"
-    [[ "$MYSQL_DB" == *"-"* ]] && fail "Database name cannot contain hyphens"
-  done
-
-  MYSQL_USER="-"
-  while [[ "$MYSQL_USER" == *"-"* ]]; do
-    required_input MYSQL_USER "Database username (pterodactyl): " "" "pterodactyl"
-    [[ "$MYSQL_USER" == *"-"* ]] && fail "Database user cannot contain hyphens"
-  done
-
-  # MySQL password input
-  rand_pw=$(gen_passwd 64)
-  password_input MYSQL_PASSWORD "Password (press enter to use randomly generated password): " "MySQL password cannot be empty" "$rand_pw"
-
-  readarray -t valid_timezones <<<"$(curl -s "$GITHUB_URL"/configs/valid_timezones.txt)"
-  log "List of valid timezones here $(linkify "https://www.php.net/manual/en/timezones.php")"
-
-  while [ -z "$timezone" ]; do
-    echo -n "* Select timezone [Europe/Stockholm]: "
-    read -r timezone_input
-
-    array_contains_item "$timezone_input" "${valid_timezones[@]}" && timezone="$timezone_input"
-    [ -z "$timezone_input" ] && timezone="Europe/Stockholm" # because köttbullar!
-  done
-
-  email_input email "Provide the email address that will be used to configure Let's Encrypt and Pterodactyl: " "Email cannot be empty or invalid"
-
-  # Initial admin account
-  email_input user_email "Email address for the initial admin account: " "Email cannot be empty or invalid"
-  required_input user_username "Username for the initial admin account: " "Username cannot be empty"
-  required_input user_firstname "First name for the initial admin account: " "Name cannot be empty"
-  required_input user_lastname "Last name for the initial admin account: " "Name cannot be empty"
-  password_input user_password "Password for the initial admin account: " "Password cannot be empty"
-
-  generate_brake 72
-
-  # set FQDN
-  while [ -z "$FQDN" ]; do
-    echo -n "* Set the FQDN of this panel (panel.example.com): "
-    read -r FQDN
-    [ -z "$FQDN" ] && fail "FQDN cannot be empty"
-  done
-
-  # Check if SSL is available
+  # Check if SSL should be configured based on FQDN
   check_FQDN_SSL
 
-  # Ask if firewall is needed
+  # Setup firewall if needed
   ask_firewall CONFIGURE_FIREWALL
 
-  # Only ask about SSL if it is available
+  # Configure SSL if needed
   if [ "$SSL_AVAILABLE" == true ]; then
-    # Ask if letsencrypt is needed
     request_certificate
-    # If it's already true, this should be a no-brainer
     [ "$CONFIGURE_LETSENCRYPT" == false ] && ssl_enabled
   fi
 
-  # verify FQDN if user has selected to assume SSL or configure Let's Encrypt
-  [ "$CONFIGURE_LETSENCRYPT" == true ] || [ "$ASSUME_SSL" == true ] && bash <(curl -s "$GITHUB_URL"/lib/verify-fqdn.sh) "$FQDN"
-
-  # overview
+  # Overview of the installation configuration
   overview
 
-  # confirm installation
-  echo -e -n "\n${COLOR_YELLOW}* Initial configuration completed. Continue with installation? (y/N): "
-  read -r CONFIRM
-  if [[ "$CONFIRM" =~ [Yy] ]]; then
-    execute_installer "panel"
-  else
-    fail "Installation aborted."
-    exit 1
-  fi
+  # Confirm installation
+  execute_installer "panel"
 }
+
 
 overview() {
   generate_brake 62
