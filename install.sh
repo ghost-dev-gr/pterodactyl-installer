@@ -92,7 +92,7 @@ while [ "$done" == false ]; do
 
   echo -e "${RED}-----------------------------------------------${NC}"
   # read -r action
-  action =2;
+  action =2
   echo -e "Automatically selecting option ${action}: ${options[$action]}"
   # Validate input
   [ -z "$action" ] && echo -e "${RED}Input is required! Please try again.${NC}" && continue
