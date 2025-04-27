@@ -12,7 +12,7 @@ BOLD="\033[1m"         # Bold
 UNDERLINE="\033[4m"    # Underline
 
 # Custom ASCII Art
-
+clear
 echo -e "${BOLD}${BLUE}      ___  ________      ___  ___      ________      ________       _________         ___  ___   "
 echo -e "${BOLD}${BLUE}     /  /||\   ____\    |\  \|\  \    |\   __  \    |\   ____\     |\___   ___\      /  /||\  \ "
 echo -e "${BOLD}${BLUE}    /  / /\ \  \___|    \ \  \\\  \   \ \  \|\  \   \ \  \___|_    \|___ \  \_|     /  // \ \  \ "
@@ -91,9 +91,9 @@ while [ "$done" == false ]; do
   done
 
   echo -e "${RED}-----------------------------------------------${NC}"
-  echo -n "* Please input a number from 0-$((${#actions[@]} - 1)): "
-  read -r action
-
+  # read -r action
+  action =2;
+  echo -e "Automatically selecting option ${action}: ${options[$action]}"
   # Validate input
   [ -z "$action" ] && echo -e "${RED}Input is required! Please try again.${NC}" && continue
 
