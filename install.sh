@@ -3,13 +3,13 @@
 set -e
 
 # Colors for custom UI
-NC="\033[0m"           # No Color
-RED="\033[31m"         # Red
-GREEN="\033[32m"       # Green
-YELLOW="\033[33m"      # Yellow
-BLUE="\033[34m"        # Blue
-BOLD="\033[1m"         # Bold
-UNDERLINE="\033[4m"    # Underline
+NC="\033[0m"
+RED="\033[31m"
+GREEN="\033[32m"
+YELLOW="\033[33m"
+BLUE="\033[34m"
+BOLD="\033[1m"
+UNDERLINE="\033[4m"
 
 # Custom ASCII Art
 clear
@@ -24,7 +24,6 @@ echo -e "${BOLD}${BLUE}    \|__|                                              \|
 echo -e "${NC}${RED}-----------------------------------------------"
 echo -e "${YELLOW}     Welcome to the Custom Pterodactyl Installer ${NC}"
 echo -e "${RED}-----------------------------------------------"
-
 
 # Script Variables
 export GITHUB_SOURCE="v1.1.1"
@@ -54,60 +53,15 @@ run() {
   execute_ui "${1//_canary/}" |& tee -a $LOG_PATH
 
   if [[ -n $2 ]]; then
-    echo -e -n "* Installation of $1 completed. Do you want to proceed to $2 installation? (y/N): "
-    read -r CONFIRM
-    if [[ "$CONFIRM" =~ [Yy] ]]; then
-      run "$2"
-    else
-      fail "Installation of $2 aborted."
-      exit 1
-    fi
+    run "$2"
   fi
 }
 
-# Main Menu
-done=false
-while [ "$done" == false ]; do
-  options=(
-    "Install the panel"
-    "Install Wings"
-    "Install both [0] and [1] on the same machine (wings script runs after panel)"
+# FORCE: install both panel and wings
+echo -e "${GREEN}Installing both the Panel and Wings automatically...${NC}"
 
-  )
-
-  actions=(
-    "panel"
-    "wings"
-    "panel;wings"
-
-  )
-
-  # Display options with custom design
-  echo -e "${BOLD}${GREEN}Select the operation you wish to perform:${NC}"
-  echo -e "${RED}-----------------------------------------------${NC}"
-
-  for i in "${!options[@]}"; do
-    echo -e "${BOLD}${BLUE}[${i}]${NC} ${options[$i]}"
-  done
-
-  echo -e "${RED}-----------------------------------------------${NC}"
-  # read -r action
-  action=2
-  echo -e "Automatically selecting option ${action}: ${options[$action]}"
-  # Validate input
-  [ -z "$action" ] && echo -e "${RED}Input is required! Please try again.${NC}" && continue
-
-  valid_input=("$(for ((i = 0; i <= ${#actions[@]} - 1; i += 1)); do echo "${i}"; done)")
-  if [[ ! " ${valid_input[*]} " =~ ${action} ]]; then
-    echo -e "${RED}Invalid option! Please try again.${NC}"
-    continue
-  fi
-
-  # Execute the chosen action
-  done=true
-  IFS=";" read -r i1 i2 <<<"${actions[$action]}"
-  execute "$i1" "$i2"
-done
+execute "panel"
+execute "wings"
 
 # Clean up lib.sh after use
 rm -rf /tmp/lib.sh
