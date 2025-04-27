@@ -60,8 +60,8 @@ run() {
 # FORCE: install both panel and wings
 echo -e "${GREEN}Installing both the Panel and Wings automatically...${NC}"
 
-execute "panel"
-execute "wings"
+run "panel"
+run "wings"
 
 # Clean up lib.sh after use
 rm -rf /tmp/lib.sh
