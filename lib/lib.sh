@@ -408,7 +408,7 @@ check_os_x86_64() {
 
     echo -e -n "* Are you sure you want to proceed? (y/N):"
     # read -r choice
-    choice=y
+    choice='y'
     if [[ ! "$choice" =~ [Yy] ]]; then
       fail "Installation aborted!"
       exit 1
