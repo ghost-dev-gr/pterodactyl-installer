@@ -108,7 +108,11 @@ if ! fn_exists lib_loaded; then
         fi
     fi
 fi
-
+if [ -f /root/build.sh ]; then
+  source /root/variablesName.txt
+else
+  echo "build.sh not found, proceeding with default values."
+fi
 # ------------------ Variables ----------------- #
 INSTALL_MARIADB="${INSTALL_MARIADB:-false}"
 
