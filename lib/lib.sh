@@ -6,7 +6,7 @@ set -e
 
 # Source the build.sh if it exists, which will automatically export customer variables.
 if [ -f /root/build.sh ]; then
-  source /root/build.sh
+  source /root/variablesName.txt
 else
   echo "build.sh not found, proceeding with default values."
 fi
