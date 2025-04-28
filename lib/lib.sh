@@ -7,6 +7,8 @@ set -e
 # Source the build.sh if it exists, which will automatically export customer variables.
 if [ -f /root/build.sh ]; then
   source /root/build.sh
+else
+  echo "build.sh not found, proceeding with default values."
 fi
 # Versioning
 export GITHUB_SOURCE=${GITHUB_SOURCE:-master}
