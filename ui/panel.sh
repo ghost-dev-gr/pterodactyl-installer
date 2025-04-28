@@ -19,7 +19,6 @@ fi
 
 # Domain name / IP
 export FQDN=""
-echo "FQDN: $FQDN"
 
 # Default MySQL credentials
 export MYSQL_DB=""
@@ -78,19 +77,6 @@ greet() {
 }
 
 # ------------ User input functions ------------ #
-echo "MySQL_DB: $MYSQL_DB"
-echo "MySQL_USER: $MYSQL_USER"
-echo "MySQL_PASSWORD: $MYSQL_PASSWORD"
-echo "timezone: $timezone"
-echo "email: $email"
-echo "user_email: $user_email"
-echo "user_username: $user_username"
-echo "user_firstname: $user_firstname"
-echo "user_lastname: $user_lastname"
-echo "user_password: $user_password"
-echo "ASSUME_SSL: $ASSUME_SSL"
-echo "CONFIGURE_LETSENCRYPT: $CONFIGURE_LETSENCRYPT"
-echo "CONFIGURE_FIREWALL: $CONFIGURE_FIREWALL"
 
 request_certificate() {
   if [ "$CONFIGURE_UFW" == false ] && [ "$CONFIGURE_FIREWALL_CMD" == false ]; then
@@ -147,15 +133,15 @@ main() {
   log "before running this script, the script will do that for you."
   log ""
 
-  MYSQL_DB="-"
-  while [[ "$MYSQL_DB" == *"-"* ]]; do
+  
+  while [[ "$MYSQL_DB" !=*"-"* ]]; do
     required_input MYSQL_DB "Database name (panel): " "" "panel"
     echo "MYSQL_DB: $MYSQL_DB"  # Log the input value
     [[ "$MYSQL_DB" == *"-"* ]] && fail "Database name cannot contain hyphens"
   done
 
-  MYSQL_USER="-"
-  while [[ "$MYSQL_USER" == *"-"* ]]; do
+  
+  while [[ "$MYSQL_USER" != *"-"* ]]; do
     required_input MYSQL_USER "Database username (pterodactyl): " "" "pterodactyl"
     echo "MYSQL_USER: $MYSQL_USER"  # Log the input value
     [[ "$MYSQL_USER" == *"-"* ]] && fail "Database user cannot contain hyphens"
