@@ -407,8 +407,8 @@ check_os_x86_64() {
     alert "Using any other architecture than 64 bit (x86_64) will cause problems."
 
     echo -e -n "* Are you sure you want to proceed? (y/N):"
-    read -r choice
-
+    # read -r choice
+    choice=y
     if [[ ! "$choice" =~ [Yy] ]]; then
       fail "Installation aborted!"
       exit 1
