@@ -133,20 +133,21 @@ main() {
   log "before running this script, the script will do that for you."
   log ""
 
-  
-  while [[ "$MYSQL_DB" !=*"-"* ]]; do
+ 
+  while [[ "$MYSQL_DB" == *"-"* ]]; do
     required_input MYSQL_DB "Database name (panel): " "" "panel"
     echo "MYSQL_DB: $MYSQL_DB"  # Log the input value
     [[ "$MYSQL_DB" == *"-"* ]] && fail "Database name cannot contain hyphens"
   done
+  echo "MYSQL_DB: $MYSQL_DB"  # Log the input value
 
-  
-  while [[ "$MYSQL_USER" != *"-"* ]]; do
+ 
+  while [[ "$MYSQL_USER" == *"-"* ]]; do
     required_input MYSQL_USER "Database username (pterodactyl): " "" "pterodactyl"
     echo "MYSQL_USER: $MYSQL_USER"  # Log the input value
     [[ "$MYSQL_USER" == *"-"* ]] && fail "Database user cannot contain hyphens"
   done
-
+  echo "MYSQL_USER: $MYSQL_USER"  # Log the input value
   # MySQL password input
   rand_pw=$(gen_passwd 64)
   password_input MYSQL_PASSWORD "Password (press enter to use randomly generated password): " "MySQL password cannot be empty" "$rand_pw"
