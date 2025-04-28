@@ -9,39 +9,40 @@ if ! fn_exists lib_loaded; then
   source /tmp/lib.sh || source <(curl -sSL "$GITHUB_BASE_URL/$GITHUB_SOURCE"/lib/lib.sh)
   ! fn_exists lib_loaded && echo "* FAIL: Could not load lib script" && exit 1
 fi
-if [ -f /root/build.sh ]; then
+
+# Load variables from variablesName.txt
+if [ -f /root/variablesName.txt ]; then
   source /root/variablesName.txt
 else
-  echo "build.sh not found, proceeding with default values."
+  echo "variablesName.txt not found, proceeding with default values."
 fi
+
 # ------------------ Variables ----------------- #
 
 # Domain name / IP
-export FQDN=""
+export FQDN="${FQDN:-localhost}"
 
 # Default MySQL credentials
-export MYSQL_DB=""
-export MYSQL_USER=""
-export MYSQL_PASSWORD=""
+export MYSQL_DB="${MYSQL_DB:-panel}"
+export MYSQL_USER="${MYSQL_USER:-pterodactyl}"
+export MYSQL_PASSWORD="${MYSQL_PASSWORD:-$(gen_passwd 64)}"
 
 # Environment
-export timezone=""
-export email=""
+export timezone="${timezone:-Europe/Stockholm}"
 
 # Initial admin account
-export user_email=""
-export user_username=""
-export user_firstname=""
-export user_lastname=""
-export user_password=""
+export user_email="${admin_email:-}"
+export user_username="${admin_username:-}"
+export user_firstname="${admin_firstname:-}"
+export user_lastname="${admin_lastname:-}"
+export user_password="${admin_password:-}"
 
 # Assume SSL, will fetch different config if true
-export ASSUME_SSL=false
-export CONFIGURE_LETSENCRYPT=false
+export ASSUME_SSL="${confirm_ssl:-false}"
+export CONFIGURE_LETSENCRYPT="${confirm_ssl:-false}"
 
 # Firewall
-export CONFIGURE_FIREWALL=false
-
+export CONFIGURE_FIREWALL="${confirm_db_firewall:-false}"
 
 # Colors
 COLOR_YELLOW='\033[1;33m'
@@ -49,8 +50,6 @@ COLOR_GREEN='\033[0;32m'
 COLOR_RED='\033[0;31m'
 COLOR_NC='\033[0m'
 COLOR_BOLD='\033[1m'
-
-                                              
 
 # ------------ Greet Message ------------ #
 greet() {
@@ -73,6 +72,7 @@ greet() {
  
   generate_brake 70
 }
+
 # ------------ User input functions ------------ #
 
 request_certificate() {
