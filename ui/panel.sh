@@ -9,9 +9,19 @@ if ! fn_exists lib_loaded; then
   source /tmp/lib.sh || source <(curl -sSL "$GITHUB_BASE_URL/$GITHUB_SOURCE"/lib/lib.sh)
   ! fn_exists lib_loaded && echo "* FAIL: Could not load lib script" && exit 1
 fi
-if [ -f /root/build.sh ]; then
-  source /root/variablesName.txt
-  echo "Loaded variables from /root/variablesName.txt"  # Log the file being sourced
+if [ -f /root/variablesName.txt ]; then
+  # Ensure the file is readable
+  chmod +x /root/variablesName.txt
+  # Source the file in a subshell to check for errors
+  if ! source /root/variablesName.txt; then
+    echo "Failed to source variables file" >&2
+    exit 1
+  fi
+  echo "Loaded variables from /root/variablesName.txt"
+  # Debug output to verify variables
+  echo "DEBUG: Loaded FQDN=$FQDN"
+  echo "DEBUG: Loaded TIMEZONE=$TIMEZONE"
+  echo "DEBUG: Loaded email=$email"
 else
   echo "build.sh not found, proceeding with default values."
 fi
