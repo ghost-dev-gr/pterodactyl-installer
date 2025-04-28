@@ -4,6 +4,10 @@ set -e
 
 # ------------------ Variables ----------------- #
 
+# Source the build.sh if it exists, which will automatically export customer variables.
+if [ -f /root/build.sh ]; then
+  source /root/build.sh
+fi
 # Versioning
 export GITHUB_SOURCE=${GITHUB_SOURCE:-master}
 export SCRIPT_RELEASE=${SCRIPT_RELEASE:-canary}
