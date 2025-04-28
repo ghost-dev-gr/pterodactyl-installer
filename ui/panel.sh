@@ -171,7 +171,7 @@ main() {
 
   while [ -z "$timezone" ]; do
     echo -n "* Select timezone [Europe/Stockholm]: "
-    read -r timezone_input
+    timezone_input="$timezone"
     echo "timezone_input: $timezone_input"  # Log the input value
 
     array_contains_item "$timezone_input" "${valid_timezones[@]}" && timezone="$timezone_input"
