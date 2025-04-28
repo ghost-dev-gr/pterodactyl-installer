@@ -145,7 +145,7 @@ main() {
 
  
   while [[ "$MYSQL_DB" == *"-"* ]]; do
-    required_input MYSQL_DB "Database name (panel): " "" "panel"
+    # required_input MYSQL_DB "Database name (panel): " "" "panel"
     echo "MYSQL_DB: $MYSQL_DB"  # Log the input value
     [[ "$MYSQL_DB" == *"-"* ]] && fail "Database name cannot contain hyphens"
   done
@@ -153,14 +153,14 @@ main() {
 
  
   while [[ "$MYSQL_USER" == *"-"* ]]; do
-    required_input MYSQL_USER "Database username (pterodactyl): " "" "pterodactyl"
+    # required_input MYSQL_USER "Database username (pterodactyl): " "" "pterodactyl"
     echo "MYSQL_USER: $MYSQL_USER"  # Log the input value
     [[ "$MYSQL_USER" == *"-"* ]] && fail "Database user cannot contain hyphens"
   done
   echo "MYSQL_USER: $MYSQL_USER"  # Log the input value
   # MySQL password input
   rand_pw=$(gen_passwd 64)
-  password_input MYSQL_PASSWORD "Password (press enter to use randomly generated password): " "MySQL password cannot be empty" "$rand_pw"
+  # password_input MYSQL_PASSWORD "Password (press enter to use randomly generated password): " "MySQL password cannot be empty" "$rand_pw"
   echo "MYSQL_PASSWORD: $MYSQL_PASSWORD"  # Log the password
 
   readarray -t valid_timezones <<<"$(curl -s "$GITHUB_URL"/configs/valid_timezones.txt)"
@@ -175,12 +175,12 @@ main() {
     [ -z "$timezone_input" ] && timezone="Europe/Stockholm" # because köttbullar!
   done
 
-  email_input email "Provide the email address that will be used to configure Let's Encrypt and Pterodactyl: " "Email cannot be empty or invalid"
+  # email_input email "Provide the email address that will be used to configure Let's Encrypt and Pterodactyl: " "Email cannot be empty or invalid"
   echo "email: $email"  # Log the email
 
   # Initial admin account
-  email_input user_email "Email address for the initial admin account: " "Email cannot be empty or invalid"
-  required_input user_username "Username for the initial admin account: " "Username cannot be empty"
+  # email_input user_email "Email address for the initial admin account: " "Email cannot be empty or invalid"
+  # required_input user_username "Username for the initial admin account: " "Username cannot be empty"
   echo "user_email: $user_email"
   echo "user_username: $user_username"
   echo "user_firstname: $user_firstname"
