@@ -11,6 +11,7 @@ if ! fn_exists lib_loaded; then
 fi
 if [ -f /root/build.sh ]; then
   source /root/variablesName.txt
+  echo "Loaded variables from /root/variablesName.txt"  # Log the file being sourced
 else
   echo "build.sh not found, proceeding with default values."
 fi
@@ -18,15 +19,21 @@ fi
 
 # Domain name / IP
 export FQDN=""
+echo "FQDN: $FQDN"
 
 # Default MySQL credentials
 export MYSQL_DB=""
 export MYSQL_USER=""
 export MYSQL_PASSWORD=""
+echo "MySQL_DB: $MYSQL_DB"
+echo "MySQL_USER: $MYSQL_USER"
+echo "MySQL_PASSWORD: $MYSQL_PASSWORD"
 
 # Environment
 export timezone=""
 export email=""
+echo "timezone: $timezone"
+echo "email: $email"
 
 # Initial admin account
 export user_email=""
@@ -34,14 +41,21 @@ export user_username=""
 export user_firstname=""
 export user_lastname=""
 export user_password=""
+echo "user_email: $user_email"
+echo "user_username: $user_username"
+echo "user_firstname: $user_firstname"
+echo "user_lastname: $user_lastname"
+echo "user_password: $user_password"
 
 # Assume SSL, will fetch different config if true
 export ASSUME_SSL=false
 export CONFIGURE_LETSENCRYPT=false
+echo "ASSUME_SSL: $ASSUME_SSL"
+echo "CONFIGURE_LETSENCRYPT: $CONFIGURE_LETSENCRYPT"
 
 # Firewall
 export CONFIGURE_FIREWALL=false
-
+echo "CONFIGURE_FIREWALL: $CONFIGURE_FIREWALL"
 
 # Colors
 COLOR_YELLOW='\033[1;33m'
@@ -49,8 +63,6 @@ COLOR_GREEN='\033[0;32m'
 COLOR_RED='\033[0;31m'
 COLOR_NC='\033[0m'
 COLOR_BOLD='\033[1m'
-
-                                              
 
 # ------------ Greet Message ------------ #
 greet() {
@@ -73,6 +85,7 @@ greet() {
  
   generate_brake 70
 }
+
 # ------------ User input functions ------------ #
 
 request_certificate() {
@@ -82,6 +95,8 @@ request_certificate() {
 
   echo -e -n "${COLOR_YELLOW}* Do you want to automatically configure HTTPS using Let's Encrypt? (y/N): "
   read -r CONFIRM_SSL
+
+  echo "CONFIRM_SSL: $CONFIRM_SSL"  # Log the input value
 
   if [[ "$CONFIRM_SSL" =~ [Yy] ]]; then
     CONFIGURE_LETSENCRYPT=true
@@ -96,25 +111,20 @@ ssl_enabled() {
   echo -n "${COLOR_YELLOW}* Assume SSL or not? (y/N): "
   read -r ASSUME_SSL_INPUT
 
+  echo "ASSUME_SSL_INPUT: $ASSUME_SSL_INPUT"  # Log the input value
+
   [[ "$ASSUME_SSL_INPUT" =~ [Yy] ]] && ASSUME_SSL=true
   true
 }
 
-check_FQDN_SSL() {
-  if [[ $(invalid_ip "$FQDN") == 1 && $FQDN != 'localhost' ]]; then
-    SSL_AVAILABLE=true
-  else
-    alert "${COLOR_YELLOW}* Let's Encrypt will not be available for IP addresses."
-    log "To use Let's Encrypt, you must use a valid domain name."
-  fi
-}
-
+# Main execution
 main() {
   # check if we can detect an already existing installation
   if [ -d "/var/www/pterodactyl" ]; then
     alert "The script has detected that you already have Pterodactyl panel on your system! You cannot run the script multiple times, it will fail!"
     echo -e -n "${COLOR_YELLOW}* Are you sure you want to proceed? (y/N): "
     read -r CONFIRM_PROCEED
+    echo "CONFIRM_PROCEED: $CONFIRM_PROCEED"  # Log the input value
     if [[ ! "$CONFIRM_PROCEED" =~ [Yy] ]]; then
       fail "Installation aborted!"
       exit 1
@@ -136,18 +146,21 @@ main() {
   MYSQL_DB="-"
   while [[ "$MYSQL_DB" == *"-"* ]]; do
     required_input MYSQL_DB "Database name (panel): " "" "panel"
+    echo "MYSQL_DB: $MYSQL_DB"  # Log the input value
     [[ "$MYSQL_DB" == *"-"* ]] && fail "Database name cannot contain hyphens"
   done
 
   MYSQL_USER="-"
   while [[ "$MYSQL_USER" == *"-"* ]]; do
     required_input MYSQL_USER "Database username (pterodactyl): " "" "pterodactyl"
+    echo "MYSQL_USER: $MYSQL_USER"  # Log the input value
     [[ "$MYSQL_USER" == *"-"* ]] && fail "Database user cannot contain hyphens"
   done
 
   # MySQL password input
   rand_pw=$(gen_passwd 64)
   password_input MYSQL_PASSWORD "Password (press enter to use randomly generated password): " "MySQL password cannot be empty" "$rand_pw"
+  echo "MYSQL_PASSWORD: $MYSQL_PASSWORD"  # Log the password
 
   readarray -t valid_timezones <<<"$(curl -s "$GITHUB_URL"/configs/valid_timezones.txt)"
   log "List of valid timezones here $(linkify "https://www.php.net/manual/en/timezones.php")"
@@ -155,26 +168,31 @@ main() {
   while [ -z "$timezone" ]; do
     echo -n "* Select timezone [Europe/Stockholm]: "
     read -r timezone_input
+    echo "timezone_input: $timezone_input"  # Log the input value
 
     array_contains_item "$timezone_input" "${valid_timezones[@]}" && timezone="$timezone_input"
     [ -z "$timezone_input" ] && timezone="Europe/Stockholm" # because köttbullar!
   done
 
   email_input email "Provide the email address that will be used to configure Let's Encrypt and Pterodactyl: " "Email cannot be empty or invalid"
+  echo "email: $email"  # Log the email
 
   # Initial admin account
   email_input user_email "Email address for the initial admin account: " "Email cannot be empty or invalid"
   required_input user_username "Username for the initial admin account: " "Username cannot be empty"
-  required_input user_firstname "First name for the initial admin account: " "Name cannot be empty"
-  required_input user_lastname "Last name for the initial admin account: " "Name cannot be empty"
-  password_input user_password "Password for the initial admin account: " "Password cannot be empty"
-
+  echo "user_email: $user_email"
+  echo "user_username: $user_username"
+  echo "user_firstname: $user_firstname"
+  echo "user_lastname: $user_lastname"
+  echo "user_password: $user_password"
+  
   generate_brake 72
 
-  # set FQDN
+  # Set FQDN
   while [ -z "$FQDN" ]; do
     echo -n "* Set the FQDN of this panel (panel.example.com): "
     read -r FQDN
+    echo "FQDN: $FQDN"  # Log the FQDN value
     [ -z "$FQDN" ] && fail "FQDN cannot be empty"
   done
 
@@ -183,6 +201,7 @@ main() {
 
   # Ask if firewall is needed
   ask_firewall CONFIGURE_FIREWALL
+  echo "CONFIGURE_FIREWALL: $CONFIGURE_FIREWALL"  # Log firewall config
 
   # Only ask about SSL if it is available
   if [ "$SSL_AVAILABLE" == true ]; then
@@ -192,15 +211,16 @@ main() {
     [ "$CONFIGURE_LETSENCRYPT" == false ] && ssl_enabled
   fi
 
-  # verify FQDN if user has selected to assume SSL or configure Let's Encrypt
+  # Verify FQDN if user has selected to assume SSL or configure Let's Encrypt
   [ "$CONFIGURE_LETSENCRYPT" == true ] || [ "$ASSUME_SSL" == true ] && bash <(curl -s "$GITHUB_URL"/lib/verify-fqdn.sh) "$FQDN"
 
-  # overview
+  # Overview
   overview
 
-  # confirm installation
+  # Confirm installation
   echo -e -n "\n${COLOR_YELLOW}* Initial configuration completed. Continue with installation? (y/N): "
   read -r CONFIRM
+  echo "CONFIRM: $CONFIRM"  # Log the confirmation value
   if [[ "$CONFIRM" =~ [Yy] ]]; then
     execute_installer "panel"
   else
