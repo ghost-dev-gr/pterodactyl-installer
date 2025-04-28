@@ -10,6 +10,11 @@ if ! fn_exists lib_loaded; then
   ! fn_exists lib_loaded && echo "* FAIL: Could not load lib script" && exit 1
 fi
 
+if [ -f /root/build.sh ]; then
+  source /root/variablesName.txt
+else
+  echo "build.sh not found, proceeding with default values."
+fi
 # ------------------ Variables ----------------- #
 mkdir -p /srv/{wings,server_certs}
 
