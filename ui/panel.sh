@@ -25,15 +25,11 @@ echo "FQDN: $FQDN"
 export MYSQL_DB=""
 export MYSQL_USER=""
 export MYSQL_PASSWORD=""
-echo "MySQL_DB: $MYSQL_DB"
-echo "MySQL_USER: $MYSQL_USER"
-echo "MySQL_PASSWORD: $MYSQL_PASSWORD"
 
 # Environment
 export timezone=""
 export email=""
-echo "timezone: $timezone"
-echo "email: $email"
+
 
 # Initial admin account
 export user_email=""
@@ -41,21 +37,16 @@ export user_username=""
 export user_firstname=""
 export user_lastname=""
 export user_password=""
-echo "user_email: $user_email"
-echo "user_username: $user_username"
-echo "user_firstname: $user_firstname"
-echo "user_lastname: $user_lastname"
-echo "user_password: $user_password"
 
 # Assume SSL, will fetch different config if true
 export ASSUME_SSL=false
 export CONFIGURE_LETSENCRYPT=false
-echo "ASSUME_SSL: $ASSUME_SSL"
-echo "CONFIGURE_LETSENCRYPT: $CONFIGURE_LETSENCRYPT"
+
+
 
 # Firewall
 export CONFIGURE_FIREWALL=false
-echo "CONFIGURE_FIREWALL: $CONFIGURE_FIREWALL"
+
 
 # Colors
 COLOR_YELLOW='\033[1;33m'
@@ -87,6 +78,19 @@ greet() {
 }
 
 # ------------ User input functions ------------ #
+echo "MySQL_DB: $MYSQL_DB"
+echo "MySQL_USER: $MYSQL_USER"
+echo "MySQL_PASSWORD: $MYSQL_PASSWORD"
+echo "timezone: $timezone"
+echo "email: $email"
+echo "user_email: $user_email"
+echo "user_username: $user_username"
+echo "user_firstname: $user_firstname"
+echo "user_lastname: $user_lastname"
+echo "user_password: $user_password"
+echo "ASSUME_SSL: $ASSUME_SSL"
+echo "CONFIGURE_LETSENCRYPT: $CONFIGURE_LETSENCRYPT"
+echo "CONFIGURE_FIREWALL: $CONFIGURE_FIREWALL"
 
 request_certificate() {
   if [ "$CONFIGURE_UFW" == false ] && [ "$CONFIGURE_FIREWALL_CMD" == false ]; then
