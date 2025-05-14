@@ -197,9 +197,6 @@ main() {
     [ -z "$FQDN" ] && fail "FQDN cannot be empty"
   done
 
-  # Check if SSL is available
-  check_FQDN_SSL
-
   # Ask if firewall is needed
   ask_firewall CONFIGURE_FIREWALL
   echo "CONFIGURE_FIREWALL: $CONFIGURE_FIREWALL"  # Log firewall config
