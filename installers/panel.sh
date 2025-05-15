@@ -486,7 +486,7 @@ perform_install() {
   insert_cronjob
   install_pteroq
   configure_nginx
-  [ "$CONFIGURE_LETSENCRYPT" == true ] && letsencrypt
+  letsencrypt
   
   log "Ending installation.. Installers/panel.sh"
   return 0
