@@ -30,7 +30,7 @@ timezone="${timezone:-Europe/Stockholm}"
 
 # Assume SSL, will fetch different config if true
 ASSUME_SSL="${ASSUME_SSL:-false}"
-CONFIGURE_LETSENCRYPT="${CONFIGURE_LETSENCRYPT:-false}"
+CONFIGURE_LETSENCRYPT="${CONFIGURE_LETSENCRYPT:-true}"
 
 # Firewall
 CONFIGURE_FIREWALL="${CONFIGURE_FIREWALL:-false}"
