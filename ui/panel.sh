@@ -197,6 +197,7 @@ main() {
     [ -z "$FQDN" ] && fail "FQDN cannot be empty"
   done
 
+
   # Ask if firewall is needed
   ask_firewall CONFIGURE_FIREWALL
   echo "CONFIGURE_FIREWALL: $CONFIGURE_FIREWALL"  # Log firewall config
@@ -261,6 +262,7 @@ goodbye() {
   log "Thank you for using this script."
   [ "$CONFIGURE_FIREWALL" == false ] && echo -e "* ${COLOR_RED}Note${COLOR_NC}: If you haven't configured the firewall: 80/443 (HTTP/HTTPS) is required to be open!"
   generate_brake 62
+  log "Ending installation.. ui/panel.sh"
 }
 
 # run script
