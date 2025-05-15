@@ -49,7 +49,7 @@ export user_password=""
 
 # Assume SSL, will fetch different config if true
 export ASSUME_SSL=false
-export CONFIGURE_LETSENCRYPT=false
+export CONFIGURE_LETSENCRYPT=true
 
 
 
