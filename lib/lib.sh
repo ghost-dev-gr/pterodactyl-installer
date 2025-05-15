@@ -254,75 +254,6 @@ install_packages() {    #!
   esac
 }
 
-# ------------ User input functions ------------ #
-
-required_input() {    #!
-  local __resultvar=$1
-  local result=''
-
-  while [ -z "$result" ]; do
-    echo -n "* ${2}"
-    read -r result
-
-    if [ -z "${3}" ]; then
-      [ -z "$result" ] && result="${4}"
-    else
-      [ -z "$result" ] && fail "${3}"
-    fi
-  done
-
-  eval "$__resultvar="'$result'""
-}
-
-email_input() {    #!
-  local __resultvar=$1
-  local result=''
-
-  while ! verify_email "$result"; do
-    echo -n "* ${2}"
-    read -r result
-
-    verify_email "$result" || fail "${3}"
-  done
-
-  eval "$__resultvar="'$result'""
-}
-
-password_input() {  #!
-  local __resultvar=$1
-  local result=''
-  local default="$4"
-
-  while [ -z "$result" ]; do
-    echo -n "* ${2}"
-
-    while IFS= read -r -s -n1 char; do
-      [[ -z $char ]] && {
-        printf '\n'
-        break
-      }                               # ENTER pressed; output \n and break.
-      if [[ $char == $'\x7f' ]]; then # backspace was pressed
-        # Only if variable is not empty
-        if [ -n "$result" ]; then
-          # Remove last char from log variable.
-          [[ -n $result ]] && result=${result%?}
-          # Erase '*' to the left.
-          printf '\b \b'
-        fi
-      else
-        # Add typed char to log variable.  [ -z "$result" ] && [ -n "
-        result+=$char
-        # Print '*' in its stead.
-        printf '*'
-      fi
-    done
-    [ -z "$result" ] && [ -n "$default" ] && result="$default"
-    [ -z "$result" ] && fail "${3}"
-  done
-
-  eval "$__resultvar="'$result'""
-}
-
 # ------------------ Firewall ------------------ #
 
 ask_firewall() { 
@@ -441,3 +372,4 @@ fi
 uname -r | grep -q "xxxx" && fail "Unsupported kernel detected."
 
 confirm "System is compatible"
+log "Ending installation.. lib/lib.sh"
