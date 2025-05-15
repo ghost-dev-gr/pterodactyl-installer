@@ -9,7 +9,6 @@ if ! fn_exists lib_loaded; then
   source /tmp/lib.sh || source <(curl -sSL "$GITHUB_BASE_URL/$GITHUB_SOURCE"/lib/lib.sh)
   ! fn_exists lib_loaded && echo "* FAIL: Could not load lib script" && exit 1
 fi
-
 if [ -f /root/build.sh ]; then
   source /root/variablesName.txt
 else
@@ -412,8 +411,8 @@ letsencrypt() {
   if [ ! -d "/etc/letsencrypt/live/$FQDN/" ] || [ "$FAILED" == true ]; then
     alert "The process of obtaining a Let's Encrypt certificate failed!"
     echo -n "* Still assume SSL? (y/N): "
-    read -r CONFIGURE_SSL
-
+    # read -r CONFIGURE_SSL
+    CONFIGURE_SSL = "y"
     if [[ "$CONFIGURE_SSL" =~ [Yy] ]]; then
       ASSUME_SSL=true
       CONFIGURE_LETSENCRYPT=false
@@ -488,7 +487,8 @@ perform_install() {
   install_pteroq
   configure_nginx
   [ "$CONFIGURE_LETSENCRYPT" == true ] && letsencrypt
-
+  
+  log "Ending installation.. Installers/panel.sh"
   return 0
 }
 
