@@ -50,7 +50,7 @@ fail() {
   log "If you are using Cloudflare, please disable the proxy or opt out from Let's Encrypt."
 
   echo -n "* Proceed anyways (your install will be broken if you do not know what you are doing)? (y/N): "
-  let override = "y";
+  read -r override
 
   [[ ! "$override" =~ [Yy] ]] && fail "Invalid FQDN or DNS record" && exit 1
   return 0
